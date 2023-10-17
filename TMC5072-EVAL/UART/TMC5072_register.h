@@ -1,9 +1,10 @@
-/* 
- * TMC5072-EVAL_UART.ino
- * 
- * Created on: 20.02.2017
- *     Author: MN
- */
+/*******************************************************************************
+* Copyright © 2017 TRINAMIC Motion Control GmbH & Co. KG
+* (now owned by Analog Devices Inc.),
+*
+* Copyright © 2023 Analog Devices Inc. All Rights Reserved. This software is
+* proprietary & confidential to Analog Devices, Inc. and its licensors.
+*******************************************************************************/
 
 #ifndef TMC5072_REGISTER_H
 #define TMC5072_REGISTER_H
@@ -17,10 +18,10 @@
 	#define TMC5072_INP_OUT      0x04
 	#define TMC5072_X_COMPARE    0x05
 
-	#define TMC5072_PWMCONF_1	  0x10
+	#define TMC5072_PWMCONF_1    0x10
 	#define TMC5072_PWM_STATUS_1 0x11
 
-	#define TMC5072_PWMCONF_2	  0x18
+	#define TMC5072_PWMCONF_2    0x18
 	#define TMC5072_PWM_STATUS_2 0x19
 
 	#define TMC5072_RAMPMODE_1   0x20
@@ -100,8 +101,8 @@
 	#define TMC5072_DCCTRL_2     0x7E
 	#define TMC5072_DRVSTATUS_2  0x7F
 
-	#define TMC5072_PWMCONF_1	  0x10
-	#define TMC5072_PWM_STATUS	  0x11
+	#define TMC5072_PWMCONF_1    0x10
+	#define TMC5072_PWM_STATUS   0x11
 
 	#define TMC5072_RAMPMODE     0x00
 	#define TMC5072_XACTUAL      0x01

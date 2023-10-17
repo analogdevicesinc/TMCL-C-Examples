@@ -1,9 +1,10 @@
-/*
- * Types.h
- *
- *  Created on: 29.09.2016
- *      Author: ed
- */
+/*******************************************************************************
+* Copyright © 2016 TRINAMIC Motion Control GmbH & Co. KG
+* (now owned by Analog Devices Inc.),
+*
+* Copyright © 2023 Analog Devices Inc. All Rights Reserved. This software is
+* proprietary & confidential to Analog Devices, Inc. and its licensors.
+*******************************************************************************/
 
 #ifndef API_TYPEDEFS_H
 #define API_TYPEDEFS_H
@@ -11,7 +12,6 @@
 	// unsigned types
 	typedef unsigned char 			u8;
 	typedef unsigned short 			u16;
-//	typedef unsigned int 			u32;
 	typedef unsigned long long 		u64;
 
 	typedef unsigned char           uint8;
