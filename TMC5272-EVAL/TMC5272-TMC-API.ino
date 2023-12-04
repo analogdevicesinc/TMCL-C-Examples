@@ -18,7 +18,6 @@ extern "C" {
  * 50 MISO        33 SPI1_SDO
  * 52 SCK         31 SPI1_SCK
  * 53 SS          30 SPI1_CSN
- * 25 DIO         8 DIO0 (DRV_ENN)
  * GND            23 CLK16 -> use internal 
  * 23 DIO         19 nSleep 
  * GND            2 GND
@@ -32,7 +31,6 @@ extern "C" {
 static TMC5272BusType activeBus = IC_BUS_SPI;
 static uint32_t nodeAddress = 0;
 
-int enable = 25;
 int nSleep = 23;
 int iRefR2 = 27;
 int iRefR3 = 29;
@@ -74,7 +72,6 @@ void setup() {
 
   // put your setup code here, to run once:
   pinMode(PIN_SPI_SS, OUTPUT);
-  pinMode(enable, OUTPUT);
   pinMode(nSleep, OUTPUT);
   pinMode(iRefR2, OUTPUT);
   pinMode(iRefR3, OUTPUT);
@@ -82,7 +79,6 @@ void setup() {
 
   digitalWrite(PIN_SPI_SS, HIGH);
   digitalWrite(nSleep, LOW);
-  digitalWrite(enable, HIGH);
   digitalWrite(iRefR2, LOW);
   digitalWrite(iRefR3, LOW);
 
@@ -97,7 +93,6 @@ void setup() {
   }
 
   delayMicroseconds(10);
-  digitalWrite(enable, LOW);
 
   digitalWrite(iRefR2, HIGH);
   digitalWrite(iRefR3, HIGH);
