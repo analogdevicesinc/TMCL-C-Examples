@@ -80,10 +80,27 @@ void tmc5272_readWriteSPI(uint16_t icID, uint8_t *data, size_t dataLength) {
 bool tmc5272_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength) {
   Serial3.write(data, writeLength);
 
-  delay(10);
+  //delay(10); //better wait for data
+  for (int i = 0;i<writeLength;i++){
+  }
 
-  if (Serial3.available() >= readLength) {
+  // Read back the echo from the write operation
+  while (Serial3.available() < writeLength ){
+    //add timeout, if timeout return false, if not return true
+  } 
+  Serial3.readBytes(data, writeLength);
+  for (int i = 0;i<writeLength;i++){
+  }
+
+  // Read the reply
+  if (readLength > 0)
+  {
+    while (Serial3.available() < readLength ){
+      //add timeout, if timeout return false, if not return true
+    } 
     Serial3.readBytes(data, readLength);
+    for (int i = 0;i<readLength;i++){
+    }
   }
 
   return true;
@@ -112,6 +129,11 @@ void setup() {
   } else if (activeBus == IC_BUS_UART) {
     digitalWrite(uartMode, HIGH);
     Serial3.begin(115200);
+    pinMode(PIN_SPI_MOSI, OUTPUT);
+    pinMode(PIN_SPI_SCK, OUTPUT);
+    digitalWrite(PIN_SPI_MOSI, LOW);
+    digitalWrite(PIN_SPI_SS, LOW);
+    digitalWrite(PIN_SPI_SCK, LOW);
   }
 
   delay(10);
