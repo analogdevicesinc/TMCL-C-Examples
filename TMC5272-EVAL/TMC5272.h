@@ -31,7 +31,7 @@ typedef enum {
 
 // => TMC-API wrapper
 extern void tmc5272_readWriteSPI(uint16_t icID, uint8_t *data, size_t dataLength);
-extern void tmc5272_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength);
+extern bool tmc5272_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength);
 extern TMC5272BusType tmc5272_getBusType(uint16_t icID);
 extern uint8_t tmc5272_getNodeAddress(uint16_t icID);
 // => TMC-API wrapper

@@ -77,7 +77,7 @@ void tmc5272_readWriteSPI(uint16_t icID, uint8_t *data, size_t dataLength) {
   digitalWrite(PIN_SPI_SS, HIGH);
 }
 
-void tmc5272_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength) {
+bool tmc5272_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength) {
   Serial3.write(data, writeLength);
 
   delay(10);
@@ -85,6 +85,8 @@ void tmc5272_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, siz
   if (Serial3.available() >= readLength) {
     Serial3.readBytes(data, readLength);
   }
+
+  return true;
 }
 
 void setup() {

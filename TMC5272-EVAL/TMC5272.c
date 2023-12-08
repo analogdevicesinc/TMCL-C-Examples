@@ -111,7 +111,8 @@ int32_t readRegisterUART(uint16_t icID, uint8_t registerAddress)
 	data[2] = registerAddress;
 	data[3] = CRC8(data, 3);
 
-	tmc5272_readWriteUART(icID, &data[0], 4, 8);
+	if (!tmc5272_readWriteUART(icID, &data[0], 4, 8))
+		return 0;
 
 	// Byte 0: Sync nibble correct?
 	if (data[0] != 0x05)
