@@ -153,7 +153,7 @@ void tmc5272_rotateMotor(uint16_t icID, uint8_t motor, int32_t velocity)
   if(motor >= TMC5272_MOTORS)
 		return;
     
-	tmc5272_writeRegister(icID, TMC5272_VMAX(motor), abs(velocity));
+	tmc5272_writeRegister(icID, TMC5272_VMAX(motor), (velocity >= 0) ? -velocity : velocity);
 	field_write(icID, TMC5272_RAMPMODE_FIELD(motor), (velocity >= 0) ? TMC5272_MODE_VELPOS : TMC5272_MODE_VELNEG);
 }
 
