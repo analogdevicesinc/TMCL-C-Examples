@@ -83,10 +83,13 @@ bool tmc5272_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, siz
   //delay(10); //better wait for data
   for (int i = 0;i<writeLength;i++){
   }
-
+  unsigned long startTime = millis();
   // Read back the echo from the write operation
   while (Serial3.available() < writeLength ){
-    //add timeout, if timeout return false, if not return true
+    //Timeout of 1sec
+    if (millis() - startTime >= 1000){
+      return false;
+    }    
   } 
   Serial3.readBytes(data, writeLength);
   for (int i = 0;i<writeLength;i++){
