@@ -1,17 +1,18 @@
 /*******************************************************************************
-* Copyright © 2017 TRINAMIC Motion Control GmbH & Co. KG
-* (now owned by Analog Devices Inc.),
-*
-* Copyright © 2023 Analog Devices Inc. All Rights Reserved. This software is
-* proprietary & confidential to Analog Devices, Inc. and its licensors.
-*******************************************************************************/
+ * Copyright © 2017 TRINAMIC Motion Control GmbH & Co. KG
+ * (now owned by Analog Devices Inc.),
+ *
+ * Copyright © 2023 Analog Devices Inc. All Rights Reserved. This software is
+ * proprietary & confidential to Analog Devices, Inc. and its licensors.
+ *******************************************************************************/
+
 
 #ifndef TMC_IC_TMC5272_H_
 #define TMC_IC_TMC5272_H_
 
 // Uncomment if you want to save space.....
 // and put the table into your own .c file
-//#define TMC5272_EXTERNAL_CRC_TABLE 1
+//#define TMC_API_EXTERNAL_CRC_TABLE 1
 
 //#include "tmc/helpers/Constants.h"
 #include <stdint.h>
@@ -59,6 +60,7 @@ static inline uint32_t field_extract(uint32_t data, RegisterField field)
         uint32_t signMask = baseMask & (~baseMask >> 1);
         value = (value ^ signMask) - signMask;
     }
+
     return value;
 }
 
@@ -80,7 +82,7 @@ static inline void field_write(uint16_t icID, RegisterField field, uint32_t valu
 
 	regValue = field_update(regValue, field, value);
 
-  tmc5272_writeRegister(icID, field.address, regValue);
+    tmc5272_writeRegister(icID, field.address, regValue);
 }
 
 #endif /* TMC_IC_TMC5272_H_ */

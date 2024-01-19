@@ -1,14 +1,16 @@
 /*******************************************************************************
-* Copyright © 2017 TRINAMIC Motion Control GmbH & Co. KG
-* (now owned by Analog Devices Inc.),
-*
-* Copyright © 2023 Analog Devices Inc. All Rights Reserved. This software is
-* proprietary & confidential to Analog Devices, Inc. and its licensors.
-*******************************************************************************/
+ * Copyright © 2017 TRINAMIC Motion Control GmbH & Co. KG
+ * (now owned by Analog Devices Inc.),
+ *
+ * Copyright © 2023 Analog Devices Inc. All Rights Reserved. This software is
+ * proprietary & confidential to Analog Devices, Inc. and its licensors.
+ *******************************************************************************/
+
 
 #include "TMC5272.h"
 
-#ifdef TMC5272_EXTERNAL_CRC_TABLE
+
+#ifdef TMC_API_EXTERNAL_CRC_TABLE
 extern const uint8_t tmcCRCTable_Poly7Reflected[256];
 #else
 const uint8_t tmcCRCTable_Poly7Reflected[256] = {
@@ -35,7 +37,8 @@ static int32_t readRegisterSPI(uint16_t icID, uint8_t address);
 static void writeRegisterSPI(uint16_t icID, uint8_t address, int32_t value);
 static int32_t readRegisterUART(uint16_t icID, uint8_t registerAddress);
 static void writeRegisterUART(uint16_t icID, uint8_t registerAddress, int32_t value);
-uint8_t CRC8(uint8_t *data, uint32_t bytes);
+static uint8_t CRC8(uint8_t *data, uint32_t bytes);
+
 
 int32_t tmc5272_readRegister(uint16_t icID, uint8_t address)
 {
@@ -153,12 +156,12 @@ void tmc5272_rotateMotor(uint16_t icID, uint8_t motor, int32_t velocity)
 {
   if(motor >= TMC5272_MOTORS)
 		return;
-    
-	tmc5272_writeRegister(icID, TMC5272_VMAX(motor), (velocity >= 0) ? -velocity : velocity);
+
+	tmc5272_writeRegister(icID, TMC5272_VMAX(motor), (velocity < 0)? -velocity : velocity);
 	field_write(icID, TMC5272_RAMPMODE_FIELD(motor), (velocity >= 0) ? TMC5272_MODE_VELPOS : TMC5272_MODE_VELNEG);
 }
 
-uint8_t CRC8(uint8_t *data, uint32_t bytes)
+static uint8_t CRC8(uint8_t *data, uint32_t bytes)
 {
 	uint8_t result = 0;
 	uint8_t *table;
