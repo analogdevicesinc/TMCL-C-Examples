@@ -1,10 +1,10 @@
 /*******************************************************************************
- * Copyright © 2017 TRINAMIC Motion Control GmbH & Co. KG
- * (now owned by Analog Devices Inc.),
- *
- * Copyright © 2023 Analog Devices Inc. All Rights Reserved. This software is
- * proprietary & confidential to Analog Devices, Inc. and its licensors.
- *******************************************************************************/
+* Copyright © 2017 TRINAMIC Motion Control GmbH & Co. KG
+* (now owned by Analog Devices Inc.),
+*
+* Copyright © 2024 Analog Devices Inc. All Rights Reserved. This software is
+* proprietary & confidential to Analog Devices, Inc. and its licensors.
+*******************************************************************************/
 
 
 #include "TMC5272.h"
