@@ -7,8 +7,7 @@
 *******************************************************************************/
 
 
-#include <tmc/ic/TMC5271/TMC5271.h>
-
+#include "TMC5271.h"
 
 #ifdef TMC_API_EXTERNAL_CRC_TABLE
 extern const uint8_t tmcCRCTable_Poly7Reflected[256];
