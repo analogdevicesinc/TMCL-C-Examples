@@ -6,13 +6,13 @@
 #include <SPI.h>
 
 #include "../TMC5271_HW_Abstraction.h"
-#include "../TMC5271.h"
+#include "../TMC5271.h" 
 #include "../TMC5271_Simple_Rotation.h"
 
 extern "C" {
-#include "TMC5271_HW_Abstraction.h"
-#include "TMC5271.h"
-#include "TMC5271_Simple_Rotation.h"
+    #include "TMC5271_HW_Abstraction.h"
+    #include "TMC5271.h"
+    #include "TMC5271_Simple_Rotation.h"
 }
 
 /* 
