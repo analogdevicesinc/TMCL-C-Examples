@@ -133,7 +133,7 @@ void setup()
         digitalWrite(uartMode, LOW);
 
         SPI.begin();
-        SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE3));
+        SPI.beginTransaction(SPISettings(115200, MSBFIRST, SPI_MODE3));
     }
     else if (activeBus == IC_BUS_UART) {
         digitalWrite(uartMode, HIGH);
