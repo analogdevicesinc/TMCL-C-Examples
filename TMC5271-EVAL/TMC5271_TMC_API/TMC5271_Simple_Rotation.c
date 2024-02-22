@@ -26,4 +26,7 @@ void initAllMotors(uint16_t icID)
     tmc5271_writeRegister(icID, TMC5271_IHOLD_IRUN, 0x04010F0A);        // writing value 0x04011F0A = 67182346 = 0.0 to address 10 = 0x12(IHOLD_IRUN)
     tmc5271_writeRegister(icID, TMC5271_CHOPCONF, 0x10410153);          // writing value 0x10410153 = 272695635 = 0.0 to address 39 = 0x38(CHOPCONF)
     tmc5271_writeRegister(icID, TMC5271_AMAX, 51200);                   // writing value to address 21 = 0x20(AMAX)
-}
+    
+    // Enable Motor 0 & 1
+    tmc5271_writeRegister(icID, TMC5271_GCONF, 0x00000002);             // writing value 0x00000002 to address 0 = 0x00(GCONF)
+}   
