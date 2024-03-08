@@ -155,10 +155,10 @@ void setup()
 }
 
 void loop() {
-  int32_t value = tmc5271_readRegister(IC_ID, TMC5271_VMAX(0));
+  int32_t value = tmc5271_readRegister(IC_ID, TMC5271_VMAX);
   Serial.print("Received Data: ");
   Serial.println(value);
   Serial.print(" from register: ");
-  Serial.println(TMC5271_VMAX(0), HEX);
+  Serial.println(TMC5271_VMAX, HEX);
   delay(1000);
 }
