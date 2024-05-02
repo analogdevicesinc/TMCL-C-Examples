@@ -1,7 +1,7 @@
 # TMC5271 TMC-API - C Examples
 
 ## Overview
-This library is intended to operate TMC5271-Eval V1.x (moving on, will be referred as *eval board*) and older boards with an Arduino boards. In the examples and the connection circuit metiond, the representation is in context to Arduino Mega boards, however, the connections can be modified in order to operate the TMC5271-Eval boards with other versions of Arduino boards respectively.
+This library is intended to operate [TMC5271-Eval V1.x](https://www.analog.com/en/resources/evaluation-hardware-and-software/evaluation-boards-kits/tmc5271-eval.html#eb-overview) (moving on, will be referred as *eval board*) and older boards with an Arduino boards. In the examples and the connection circuit metiond, the representation is in context to Arduino Mega boards, however, the connections can be modified in order to operate the Eval Board with other versions of Arduino boards respectively.
 
 ## Usage
 ### Hardware
@@ -24,7 +24,7 @@ To use the eval boards make the following connections between Arduino Mega and t
  | 31 uartMode    | 20 USEL                  |
 
  ### Installing Libraries
- Adding the TMC5271_TMC_API library to your Arduino Libraries is quite a simple process, just follow these steps:
+ Adding the *TMC5271_TMC_API* library to your Arduino Libraries is quite a simple process, just follow these steps:
  1. Download the library from GitHub.
  2. Copy the TMC5271_TMC_API complete directory to *C:\Users\Your_User_Name\Documents\Arduino\libraries\TMC5271_TMC_API*
  3. Go to *TMC5271_TMC_API/examples/TMC5271-TMC-API/* and open [TMC5271-TMC-API.ino](\examples\TMC5271-TMC-API\TMC5271-TMC-API.ino).
@@ -34,4 +34,9 @@ To use the eval boards make the following connections between Arduino Mega and t
  ## Understanding the Code
  The entire library being very complex and inter-integrated as a whole, this section is a simple attempt to make you familiary with the basic aspects of the code. 
 
+ 1. `TMC5271BusType activeBus` - Set this to `IC_BUS_SPI` or `IC_BUS_UART` based on what kind of communication protocol you intend to use for you application.
+ 2. Set the baud rate for `Serial.begin(XXXX)` and `Serial3.begin(XXXX)`
+ 3. `tmc5271_rotateMotor(IC_ID, 0, 0xXXXXX)` - Set appropriate velocity based on the motor you are using.
  
+ > Remember to change the pin numbers in your code if you have changed the connection or are using any other arduino boards.
+
