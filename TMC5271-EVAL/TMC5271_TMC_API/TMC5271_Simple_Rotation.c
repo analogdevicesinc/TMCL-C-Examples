@@ -1,8 +1,7 @@
 /*******************************************************************************
-* Copyright © 2024 Analog Devices Inc. All Rights Reserved. This software is
-* proprietary & confidential to Analog Devices, Inc. and its licensors.
+* Copyright © 2024 Analog Devices Inc. All Rights Reserved.
+* This software is proprietary to Analog Devices, Inc. and its licensors.
 *******************************************************************************/
-
 
 #include "TMC5271_Simple_Rotation.h"
 
