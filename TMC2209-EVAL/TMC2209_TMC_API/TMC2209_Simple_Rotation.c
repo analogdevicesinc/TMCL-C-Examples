@@ -12,11 +12,11 @@
  */
 void initAllMotors(uint16_t icID)
 {
-    tmc2209_writeRegister(icID, TMC2209_GCONF, 0x00000040);
-    tmc2209_writeRegister(icID, TMC2209_IHOLD_IRUN, 0x00071703);
-    tmc2209_writeRegister(icID, TMC2209_TPOWERDOWN, 0x00000014);
-    tmc2209_writeRegister(icID, TMC2209_CHOPCONF, 0x10000053);
-    tmc2209_writeRegister(icID, TMC2209_PWMCONF, 0xC10D0024);
+    tmc2209_writeRegister(icID, TMC2209_GCONF, 0x00000004);
+    tmc2209_writeRegister(icID, TMC2209_IHOLD_IRUN, 0x10000053);
+    // tmc2209_writeRegister(icID, TMC2209_TPOWERDOWN, 0x00000014);
+    tmc2209_writeRegister(icID, TMC2209_CHOPCONF, 0x00061F12);      // Sets Irms=1.0A and Ihold=0.5A
+    // tmc2209_writeRegister(icID, TMC2209_PWMCONF, 0xC10D0024);
 
     // Generate step pulse (S/D) externally via the connected microcontroller.
 }
