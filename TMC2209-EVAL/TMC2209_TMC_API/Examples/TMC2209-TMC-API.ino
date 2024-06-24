@@ -37,9 +37,9 @@ const uint8_t tmcCRCTable_Poly7Reflected[256] = {
     0xB4, 0x25, 0x57, 0xC6, 0xB3, 0x22, 0x50, 0xC1, 0xBA, 0x2B, 0x59, 0xC8, 0xBD, 0x2C, 0x5E, 0xCF,
 };
 
-int en_pin = 23;
-int dir_pin = 27;
-int step_pin = 29;
+int en_pin = 8;
+int dir_pin = 12;
+int step_pin = 11;
 
 uint8_t tmc2209_getNodeAddress(uint16_t icID) {
   return nodeAddress;
