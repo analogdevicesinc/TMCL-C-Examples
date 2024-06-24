@@ -12,7 +12,15 @@ extern "C" {
 }
 
 /* 
-    Put pin connections here
+ * In this example the step pulses for Motor are produced by using a Timer-1
+ *  
+ * Arduino Pins       Eval Board Pins
+ * 14 UART_TX3        21 UART_TX (DI010)
+ * 15 UART_RX3        22 UART_RX (DIO11)
+ * 08 PIN_8           08 ENN (DIO0)
+ * 11 PIN_11(OC1A)    (J303) STEP
+ * 12 PIN_12          (J303) DIR
+ * GND                GND
  */
 
 #define IC_ID 0
