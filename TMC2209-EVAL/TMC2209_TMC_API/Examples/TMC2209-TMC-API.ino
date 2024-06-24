@@ -80,7 +80,13 @@ bool tmc2209_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, siz
 }
 
 void setup() {
-  Serial.begin(115200);
+  // Configuring Timer 1 - Toggling pin-11 (OC1A) at 20kHz
+  TCCR1A |= (1 << COM1A0);                // Enabling toggle on OC1A pin
+  TCCR1B |= (1 << WGM13) | (1 << CS10);   // Setting CTC Mode for the timer adn prescalar=1
+
+  OCR1A = 0x0007;                         // Setting output at 100kHz
+
+  TIMSK1 = (1 << ICIE1) | (1 << OCIE1A);  // Enabling respective ISR for respective Timer 1 interrupt
 
   // put your setup code here, to run once:
   pinMode(en_pin, OUTPUT);
@@ -103,15 +109,5 @@ void setup() {
 }
 
 void loop() {
-//   static int32_t value = tmc2209_readRegister(IC_ID, TMC2209_IHOLD_IRUN);
-//   Serial.print("Received Data: ");
-//   Serial.println(value);
-//   Serial.print(" from register: ");
-//   Serial.println(value, HEX);
-//   delay(1000);
-
-    digitalWrite(step_pin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(step_pin, LOW);
-    delayMicroseconds(10);
+  
 }
