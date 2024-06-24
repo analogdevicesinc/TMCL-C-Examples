@@ -88,7 +88,7 @@ void setup() {
 
   TIMSK1 = (1 << ICIE1) | (1 << OCIE1A);  // Enabling respective ISR for respective Timer 1 interrupt
 
-  // put your setup code here, to run once:
+  // Initialising Pinouts
   pinMode(en_pin, OUTPUT);
   pinMode(step_pin, OUTPUT);
   pinMode(dir_pin, OUTPUT);
@@ -97,17 +97,18 @@ void setup() {
   digitalWrite(step_pin, LOW);
   digitalWrite(dir_pin, LOW);
 
+  // Configuring UART for communication
   Serial3.begin(115200);
 
   delay(10);
 
   initAllMotors(IC_ID);
 
+  // Enabling Motor Outputs
   digitalWrite(en_pin, HIGH);
-  digitalWrite(step_pin, LOW);
   digitalWrite(dir_pin, HIGH);
 }
 
 void loop() {
-  
+
 }
