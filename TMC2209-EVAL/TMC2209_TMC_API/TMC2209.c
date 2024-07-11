@@ -42,19 +42,30 @@ static inline bool tmc2209_cache(uint16_t icID, TMC2209CacheOp operation, uint8_
 	return false;
 }
 #else
-#ifdef TMC2209_ENABLE_TMC_CACHE
-uint8_t tmc2209_registerAccess[TMC2209_IC_CACHE_COUNT][TMC2209_REGISTER_COUNT];
+#if TMC2209_ENABLE_TMC_CACHE == 1
+
+uint8_t tmc2209_dirtyBits[TMC2209_IC_CACHE_COUNT][TMC2209_REGISTER_COUNT/8]= {0};
 int32_t tmc2209_shadowRegister[TMC2209_IC_CACHE_COUNT][TMC2209_REGISTER_COUNT];
 
-static void initRegisterAccessArray(void)
+void tmc2209_setDirtyBit(uint16_t icID, uint8_t index, bool value)
 {
-	for(size_t icID = 0; icID < TMC2209_IC_CACHE_COUNT; icID++)
-	{
-	    for(size_t i = 0; i < TMC2209_REGISTER_COUNT; i++)
-	    {
-	        tmc2209_registerAccess[icID][i] = tmc2209_defaultRegisterAccess[i];
-	    }
-	}
+    if(index >= TMC2209_REGISTER_COUNT)
+        return;
+
+    uint8_t *tmp = &tmc2209_dirtyBits[icID][index / 8];
+    uint8_t shift = (index % 8);
+    uint8_t mask = 1 << shift;
+    *tmp = (((*tmp) & (~(mask))) | (((value) << (shift)) & (mask)));
+}
+
+bool tmc2209_getDirtyBit(uint16_t icID, uint8_t index)
+{
+    if(index >= TMC2209_REGISTER_COUNT)
+        return false;
+
+    uint8_t *tmp = &tmc2209_dirtyBits[icID][index / 8];
+    uint8_t shift = (index % 8);
+    return ((*tmp) >> shift) & 1;
 }
 
 /*
@@ -63,14 +74,7 @@ static void initRegisterAccessArray(void)
  */
 bool tmc2209_cache(uint16_t icID, TMC2209CacheOp operation, uint8_t address, uint32_t *value)
 {
-	static bool firstTime = true;
-	if(firstTime)
-	{
-		initRegisterAccessArray();
-		firstTime = false;
-	}
-
-	if (operation == TMC2209_CACHE_READ)
+    if (operation == TMC2209_CACHE_READ)
 	{
 		// Check if the value should come from cache
 
@@ -80,14 +84,14 @@ bool tmc2209_cache(uint16_t icID, TMC2209CacheOp operation, uint8_t address, uin
 
 		// Only non-readable registers care about caching
 		// Note: This could also be used to cache i.e. RW config registers to reduce bus accesses
-		if (TMC2209_IS_READABLE(tmc2209_registerAccess[icID][address]))
+		if (TMC2209_IS_READABLE(tmc2209_registerAccess[address]))
 			return false;
 
 		// Grab the value from the cache
 		*value = tmc2209_shadowRegister[icID][address];
 		return true;
 	}
-	else if (operation == TMC2209_CACHE_WRITE)
+	else if (operation == TMC2209_CACHE_WRITE || operation == TMC2209_CACHE_FILL_DEFAULT)
 	{
 		// Fill the cache
 
@@ -95,9 +99,13 @@ bool tmc2209_cache(uint16_t icID, TMC2209CacheOp operation, uint8_t address, uin
 		if (icID >= TMC2209_IC_CACHE_COUNT)
 			return false;
 
-		// Write to the shadow register and mark the register dirty
+		// Write to the shadow register.
 		tmc2209_shadowRegister[icID][address] = *value;
-		tmc2209_registerAccess[icID][address] |= TMC2209_ACCESS_DIRTY;
+		// For write operations, mark the register dirty
+		if (operation == TMC2209_CACHE_WRITE)
+		{
+			tmc2209_setDirtyBit(icID, address, true);
+		}
 
 		return true;
 	}
