@@ -17,10 +17,11 @@ extern "C" {
  * Arduino Pins       Eval Board Pins
  * ---------------------------------------
  * 14 UART_TX3        21 UART_TX (DI010)
- * 15 UART_RX3        22 UART_RX (DIO11)
+ * 15 UART_RX3        22 UART_RX (DIO11)    // 1K ohm resistor exists in Eval board to provide SWUART config
  * 08 PIN_8           08 ENN (DIO0)
  * 11 PIN_11          (J303) STEP
  * 12 PIN_12          (J303) DIR
+ * 5V                 +5V_VM
  * GND                GND
  * 
  * # This pinout mentioned for arduino are with reference to Arduino Mega
