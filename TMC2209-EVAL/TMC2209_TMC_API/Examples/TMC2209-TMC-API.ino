@@ -15,16 +15,21 @@ extern "C" {
  * In this example the step pulses for Motor are produced by using a Timer-1
  *  
  * Arduino Pins       Eval Board Pins
+ * ---------------------------------------
  * 14 UART_TX3        21 UART_TX (DI010)
  * 15 UART_RX3        22 UART_RX (DIO11)
  * 08 PIN_8           08 ENN (DIO0)
- * 11 PIN_11(OC1A)    (J303) STEP
+ * 11 PIN_11          (J303) STEP
  * 12 PIN_12          (J303) DIR
  * GND                GND
+ * 
+ * # This pinout mentioned for arduino are with reference to Arduino Mega
  */
 
 #define MOTOR0_ID 0
 #define MOTOR1_ID 1
+#define MOTOR2_ID 2
+#define MOTOR3_ID 3
 
 static uint8_t nodeAddress0 = 0;
 static uint8_t nodeAddress1 = 1;
@@ -50,10 +55,12 @@ const uint8_t tmcCRCTable_Poly7Reflected[256] = {
     0xB4, 0x25, 0x57, 0xC6, 0xB3, 0x22, 0x50, 0xC1, 0xBA, 0x2B, 0x59, 0xC8, 0xBD, 0x2C, 0x5E, 0xCF,
 };
 
+// Pin for Motor-0
 int en0_pin = 10;
 int dir0_pin = 12;
 int step0_pin = 11;
 
+// Pins for Motor-1
 int en1_pin = 2;
 int dir1_pin = 3;
 int step1_pin = 4;
@@ -61,13 +68,13 @@ int step1_pin = 4;
 uint8_t tmc2209_getNodeAddress(uint16_t icID) {
 
   switch (icID)
-    case 0;
+    case MOTOR0_ID;
       return nodeAddress0;
-    case 1;
+    case MOTOR1_ID;
       return nodeAddress1;
-    case 2;
+    case MOTOR2_ID;
       return nodeAddress2;
-    case 3;
+    case MOTOR3_ID;
       return nodeAddress3;
       
 }
@@ -75,35 +82,23 @@ uint8_t tmc2209_getNodeAddress(uint16_t icID) {
 
 
 bool tmc2209_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength) {
-  Serial3.write(data, writeLength);
+    Serial3.write(data, writeLength);
+    
+    delay(2);                             // Appropriate for your setup
 
-  //delay(10); //better wait for data
-  for (int i = 0;i<writeLength;i++){
-  }
-  unsigned long startTime = millis();
-  // Read back the echo from the write operation
-  while (Serial3.available() < writeLength ){
-    //Timeout of 1sec
-    if (millis() - startTime >= 1000){
-      return false;
-    }    
-  } 
-  Serial3.readBytes(data, writeLength);
-  for (int i = 0;i<writeLength;i++){
-  }
-
-  // Read the reply
-  if (readLength > 0)
-  {
-    while (Serial3.available() < readLength ){
-      //add timeout, if timeout return false, if not return true
-    } 
-    Serial3.readBytes(data, readLength);
-    for (int i = 0;i<readLength;i++){
+    unsigned long startTime = millis();
+    // Wait for write echo
+    while (Serial3.available() < readLength) {
+        // One second timeout
+        if (millis() - startTime >= 1000) {
+          Serial.println("Serial Write Timeout!");
+          return false; // Timeout
+        }
     }
-  }
 
-  return true;
+    Serial3.readBytes(data, readLength);
+    
+    return true;
 }
 
 void setup() {
@@ -123,11 +118,11 @@ void setup() {
   pinMode(step1_pin, OUTPUT);
   pinMode(dir1_pin, OUTPUT);
 
-  digitalWrite(en0_pin, LOW);
+  digitalWrite(en0_pin, HIGH);
   digitalWrite(step0_pin, LOW);
   digitalWrite(dir0_pin, LOW);
 
-  digitalWrite(en1_pin, LOW);
+  digitalWrite(en1_pin, HIGH);
   digitalWrite(step1_pin, LOW);
   digitalWrite(dir1_pin, LOW);
 
@@ -135,20 +130,40 @@ void setup() {
   Serial3.begin(115200);
 
   delay(10);
-
+   
+  // Initialising Motors
   initAllMotors(MOTOR0_ID);
   initAllMotors(MOTOR1_ID);
 
   // Enabling Motor Outputs
-  digitalWrite(en0_pin, HIGH);
+  digitalWrite(en0_pin, LOW);
   digitalWrite(dir0_pin, HIGH);
 
-  digitalWrite(en1_pin, HIGH);
+  digitalWrite(en1_pin, LOW);
   digitalWrite(dir1_pin, HIGH);
 }
 
 void loop() {
+  // Debugging Loop
+  int32_t value0 = tmc2209_readRegister(MOTOR0_ID, TMC2209_GCONF);
+  if (value0 == -2) {
+    Serial.println("Error reading GCONF register!");
+  } else {
+    Serial.print("Received Data 0: ");
+    Serial.println(value0);
+  }
 
+  int32_t value1 = tmc2209_readRegister(MOTOR0_ID, TMC2209_IHOLD_IRUN);
+  if (value1 == -2) {
+    Serial.println("Error reading IHOLD_IRUN register!");
+  } else {
+    Serial.print("Received Data 1: ");
+    Serial.println(value1);
+  }
+  
+  Serial.println("----------------------");
+  
+  delay(1000);
 }
 
 ISR(TIMER1_COMPA_vect){
