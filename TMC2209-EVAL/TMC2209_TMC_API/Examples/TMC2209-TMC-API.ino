@@ -23,8 +23,13 @@ extern "C" {
  * GND                GND
  */
 
-#define IC_ID 0
-static uint8_t nodeAddress = 0;
+#define MOTOR0_ID 0
+#define MOTOR1_ID 1
+
+static uint8_t nodeAddress0 = 0;
+static uint8_t nodeAddress1 = 1;
+static uint8_t nodeAddress2 = 2;
+static uint8_t nodeAddress3 = 3;
 
 const uint8_t tmcCRCTable_Poly7Reflected[256] = {
     0x00, 0x91, 0xE3, 0x72, 0x07, 0x96, 0xE4, 0x75, 0x0E, 0x9F, 0xED, 0x7C, 0x09, 0x98, 0xEA, 0x7B,
@@ -45,12 +50,26 @@ const uint8_t tmcCRCTable_Poly7Reflected[256] = {
     0xB4, 0x25, 0x57, 0xC6, 0xB3, 0x22, 0x50, 0xC1, 0xBA, 0x2B, 0x59, 0xC8, 0xBD, 0x2C, 0x5E, 0xCF,
 };
 
-int en_pin = 8;
-int dir_pin = 12;
-int step_pin = 11;
+int en0_pin = 10;
+int dir0_pin = 12;
+int step0_pin = 11;
+
+int en1_pin = 2;
+int dir1_pin = 3;
+int step1_pin = 4;
 
 uint8_t tmc2209_getNodeAddress(uint16_t icID) {
-  return nodeAddress;
+
+  switch (icID)
+    case 0;
+      return nodeAddress0;
+    case 1;
+      return nodeAddress1;
+    case 2;
+      return nodeAddress2;
+    case 3;
+      return nodeAddress3;
+      
 }
 
 
@@ -88,8 +107,7 @@ bool tmc2209_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, siz
 }
 
 void setup() {
-  // Configuring Timer 1 - Toggling pin-11 (OC1A) at 20kHz
-  TCCR1A |= (1 << COM1A0);                // Enabling toggle on OC1A pin
+  // Configuring Timer 1 - CTC Mode
   TCCR1B |= (1 << WGM13) | (1 << CS10);   // Setting CTC Mode for the timer adn prescalar=1
 
   OCR1A = 0x0007;                         // Setting output at 100kHz
@@ -97,26 +115,43 @@ void setup() {
   TIMSK1 = (1 << ICIE1) | (1 << OCIE1A);  // Enabling respective ISR for respective Timer 1 interrupt
 
   // Initialising Pinouts
-  pinMode(en_pin, OUTPUT);
-  pinMode(step_pin, OUTPUT);
-  pinMode(dir_pin, OUTPUT);
+  pinMode(en0_pin, OUTPUT);
+  pinMode(step0_pin, OUTPUT);
+  pinMode(dir0_pin, OUTPUT);
+  
+  pinMode(en1_pin, OUTPUT);
+  pinMode(step1_pin, OUTPUT);
+  pinMode(dir1_pin, OUTPUT);
 
-  digitalWrite(en_pin, LOW);
-  digitalWrite(step_pin, LOW);
-  digitalWrite(dir_pin, LOW);
+  digitalWrite(en0_pin, LOW);
+  digitalWrite(step0_pin, LOW);
+  digitalWrite(dir0_pin, LOW);
+
+  digitalWrite(en1_pin, LOW);
+  digitalWrite(step1_pin, LOW);
+  digitalWrite(dir1_pin, LOW);
 
   // Configuring UART for communication
   Serial3.begin(115200);
 
   delay(10);
 
-  initAllMotors(IC_ID);
+  initAllMotors(MOTOR0_ID);
+  initAllMotors(MOTOR1_ID);
 
   // Enabling Motor Outputs
-  digitalWrite(en_pin, HIGH);
-  digitalWrite(dir_pin, HIGH);
+  digitalWrite(en0_pin, HIGH);
+  digitalWrite(dir0_pin, HIGH);
+
+  digitalWrite(en1_pin, HIGH);
+  digitalWrite(dir1_pin, HIGH);
 }
 
 void loop() {
 
+}
+
+ISR(TIMER1_COMPA_vect){
+  digitalWrite(step0_pin, digitalRead(step0_pin) ^ 1);
+  digitalWrite(step1_pin, digitalRead(step1_pin) ^ 1);
 }
