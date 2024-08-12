@@ -15,22 +15,23 @@ extern "C" {
  * In this example the step pulses for Motor are produced by using a Timer-1
  *  
  * Arduino Pins       Eval Board Pins
+ * -----------------------------------
+ * +5V                42 +5V_VM
  * 14 UART_TX3        21 UART_TX (DI010)
  * 15 UART_RX3        22 UART_RX (DIO11)
  * 08 PIN_8           08 ENN (DIO0)
- * 11 PIN_11(OC1A)    (J303) STEP
- * 12 PIN_12          (J303) DIR
+ * 11 PIN_11(OC1A)    17 INT_STEP (DIO6)
+ * 12 PIN_12          18 INT_DIR (DIO7)
+ * GND                23 CLK
  * GND                GND
+ *
+ ** For using multi-node configurations, please look at the pins in the code and make connections accordingly
  */
 
 #define MOTOR0_ID 0
 #define MOTOR1_ID 1
 #define MOTOR2_ID 2
 #define MOTOR3_ID 3
-
-
-static uint8_t nodeAddress0 = 0;
-static uint8_t nodeAddress1 = 1;
 
 enum motors {
   motor0,
