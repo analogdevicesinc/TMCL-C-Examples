@@ -19,7 +19,7 @@ extern "C" {
  * +5V                42 +5V_VM
  * 14 UART_TX3        21 UART_TX (DI010)
  * 15 UART_RX3        22 UART_RX (DIO11)
- * 08 PIN_8           08 ENN (DIO0)
+ * 10 PIN_8           08 ENN (DIO0)
  * 11 PIN_11(OC1A)    17 INT_STEP (DIO6)
  * 12 PIN_12          18 INT_DIR (DIO7)
  * GND                23 CLK

@@ -12,7 +12,7 @@ To use the eval boards make the following connections between Arduino Mega and t
  | +5V             |   42 +5V_VM          |   
  | 18 UART_TX1     |   21 UART_TX (DI010) |       
  | 19 UART_RX1     |   22 UART_RX (DIO11) |     
- | 08 PIN_8        |   08 ENN (DIO0)      |  
+ | 10 PIN_8        |   08 ENN (DIO0)      |  
  | 11 PIN_11       |   17 INT_STEP (DIO6) |      
  | 12 PIN_12       |   18 INT_DIR (DIO7)  |     
  | GND             |   23 CLK             |    
