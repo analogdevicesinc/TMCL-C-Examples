@@ -16,5 +16,5 @@ void initAllMotors(uint16_t icID)
     tmc5130_writeRegister(icID, TMC5130_IHOLD_IRUN, 0x0000AF08); // IHOLD_IRUN
     tmc5130_writeRegister(icID, TMC5130_CHOPCONF, 0x10000053);   // CHOPCONF
     tmc5130_writeRegister(icID, TMC5130_TPOWERDOWN, 0x00000014);
-tmc5130_writeRegister(icID, TMC5130_PWMCONF, 0xC10D0024);
+    tmc5130_writeRegister(icID, TMC5130_PWMCONF, 0xC10D0024);
 }
