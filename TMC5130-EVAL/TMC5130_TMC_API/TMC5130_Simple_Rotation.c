@@ -11,10 +11,17 @@
  */
 void initAllMotors(uint16_t icID)
 {
-    tmc5130_writeRegister(icID, TMC5130_GCONF, 0x000000C0);      // GCONF
-    tmc5130_writeRegister(icID, TMC5130_SLAVECONF, 0x00000300);  // SLAVECONF (for UART address if needed)
-    tmc5130_writeRegister(icID, TMC5130_IHOLD_IRUN, 0x0000AF08); // IHOLD_IRUN
-    tmc5130_writeRegister(icID, TMC5130_CHOPCONF, 0x10000053);   // CHOPCONF
-    tmc5130_writeRegister(icID, TMC5130_TPOWERDOWN, 0x00000014);
-    tmc5130_writeRegister(icID, TMC5130_PWMCONF, 0xC10D0024);
+    tmc5130_writeRegister(icID, TMC5130_GCONF, 0x00000000);  // Digital current scaling, SpreadCycle mode
+    
+    // IHOLD_IRUN: Set max current (IRUN = 31), and hold current (~30% of IRUN)
+    tmc5130_writeRegister(icID, TMC5130_IHOLD_IRUN, 0x0000AF08); // Max run current, 30% hold current
+    
+    // CHOPCONF: VSENSE = 1, microstepping 1/16, TOFF = 3
+    tmc5130_writeRegister(icID, TMC5130_CHOPCONF, 0x000101D5);
+    
+    // PWMCONF: Enable StealthChop, autoscale PWM, amplitude ~ moderate
+    tmc5130_writeRegister(icID, TMC5130_PWMCONF, 0x000500C8);
+    
+    // Set Ramp mode to velocity mode (constant velocity rotation)
+    tmc5130_writeRegister(icID, TMC5130_RAMPMODE, 0x00000001); // Velocity mode
 }
