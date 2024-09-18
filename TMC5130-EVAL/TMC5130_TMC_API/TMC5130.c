@@ -309,4 +309,10 @@ static uint8_t CRC8(uint8_t *data, uint32_t bytes)
 	return result;
 }
 
+void tmc5130_rotateMotor(uint16_t icID)
+{
+	tmc5130_writeRegister(icID, TMC5130_VMAX, 125000);
+    tmc5130_writeRegister(icID, TMC5130_AMAX, 10000);
+}
+
 /*******************************************************************************************************************************************************************/
