@@ -13,6 +13,21 @@ extern "C"
 }
 
 /* 
+ * In this example the step pulses for Motor are produced by using a Timer-1
+ *  
+ * Arduino Pins       Eval Board Pins
+ * -----------------------------------
+ * +5V                05 +5V_USB
+ * 31 UART_MODE       36 SWSEL
+ * 50 SPI-MISO        33 SPI1_SDO
+ * 51 SPI-MOSI        32 SPI1_SDI
+ * 52 SPI-SCK         31 SPI1_SCK
+ * 23 SPI-CS          30 SPI1_CSN
+ * GND                08 DRV_ENN
+ * GND                23 CLK
+ * GND                GND
+ *
+ ** For using multi-node configurations, please look at the pins in the code and make connections accordingly
  */
 
 #define IC_ID 0
@@ -127,11 +142,5 @@ void setup()
 
 void loop()
 {
-    // tmc5130_writeRegister(IC_ID, TMC5130_CHOPCONF, 0x10000053);
-    // int32_t value = tmc5130_readRegister(IC_ID, TMC5130_CHOPCONF);
-    // Serial.print("Received Data: ");
-    // Serial.println(value);
-    // Serial.print(" from register: ");
-    // Serial.println(TMC5130_CHOPCONF, HEX);
-    delay(1000);
+
 }
