@@ -137,7 +137,7 @@ void setup()
     delay(10);
 
     initAllMotors(IC_ID);
-    tmc5130_rotateMotor(IC_ID);
+    tmc5130_rotateMotor(IC_ID, 0, 125000);
 }
 
 void loop()

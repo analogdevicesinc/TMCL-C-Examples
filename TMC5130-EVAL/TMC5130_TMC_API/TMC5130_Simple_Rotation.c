@@ -21,7 +21,7 @@ void initAllMotors(uint16_t icID)
     
     // PWMCONF: Enable StealthChop, autoscale PWM, amplitude ~ moderate
     tmc5130_writeRegister(icID, TMC5130_PWMCONF, 0x000500C8);
-    
-    // Set Ramp mode to velocity mode (constant velocity rotation)
-    tmc5130_writeRegister(icID, TMC5130_RAMPMODE, 0x00000001); // Velocity mode
+
+    // AMAX: Setting the acceleration
+    tmc5130_writeRegister(icID, TMC5130_AMAX, 10000);
 }

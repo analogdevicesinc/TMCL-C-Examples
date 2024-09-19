@@ -309,10 +309,13 @@ static uint8_t CRC8(uint8_t *data, uint32_t bytes)
 	return result;
 }
 
-void tmc5130_rotateMotor(uint16_t icID)
+void tmc5130_rotateMotor(uint16_t icID, uint8_t motor, int32_t velocity)
 {
-	tmc5130_writeRegister(icID, TMC5130_VMAX, 125000);
-    tmc5130_writeRegister(icID, TMC5130_AMAX, 10000);
+    if(motor >= TMC5130_MOTORS)
+          return;
+    tmc5130_writeRegister(icID, TMC5130_VMAX, (velocity >= 0)? velocity : -velocity);
+    // Set direction
+    tmc5130_writeRegister(icID, TMC5130_RAMPMODE, (velocity >= 0) ? TMC5130_MODE_VELPOS : TMC5130_MODE_VELNEG);
 }
 
 /*******************************************************************************************************************************************************************/
