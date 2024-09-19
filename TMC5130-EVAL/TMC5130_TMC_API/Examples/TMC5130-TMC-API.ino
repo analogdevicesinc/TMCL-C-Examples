@@ -75,34 +75,33 @@ void tmc5130_readWriteSPI(uint16_t icID, uint8_t *data, size_t dataLength)
 
 bool tmc5130_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength)
 {
-    Serial3.write(data, writeLength);
+  Serial3.write(data, writeLength);
+    delay(2); // Ensure this delay is appropriate for your setup
 
-    //delay(10); //better wait for data
-    for (int i = 0; i < writeLength; i++) {}
     unsigned long startTime = millis();
-    // Read back the echo from the write operation
-    while (Serial3.available() < writeLength)
-    {
-        //Timeout of 1sec
-        if (millis() - startTime >= 1000)
-        {
-            return false;
+    
+    // Wait for write echo
+    while (Serial3.available() < readLength) {
+        if (millis() - startTime >= 1000) {
+          Serial.println("Serial Write Timeout!");
+          return false; // Timeout
         }
     }
+    
+    // Skip the echoed bytes
     Serial3.readBytes(data, writeLength);
-    for (int i = 0; i < writeLength; i++) {}
 
-    // Read the reply
-    if (readLength > 0)
-    {
-        while (Serial3.available() < readLength)
-        {
-            //add timeout, if timeout return false, if not return true
+    // Wait for the actual response
+    startTime = millis();
+    while (Serial3.available() < readLength) {
+        if (millis() - startTime >= 1000) {
+            Serial.println("Serial Read Timeout!");
+            return false; // Timeout
         }
-        Serial3.readBytes(data, readLength);
-        for (int i = 0; i < readLength; i++) {}
     }
 
+    // Read the actual response
+    Serial3.readBytes(data, readLength);
     return true;
 }
 
