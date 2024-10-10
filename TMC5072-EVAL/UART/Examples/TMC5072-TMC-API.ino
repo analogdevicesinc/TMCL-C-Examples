@@ -36,14 +36,24 @@ extern "C" {
  */
  
 #define IC_ID 0
-  
+static TMC5072BusType activeBus = IC_BUS_UART;
+static uint8_t nodeAddress = 0;
+
 int SWSEL = 2;
 int DRV_ENN = 3;
 int SDO_RING = 4;
 const int CLOCKOUT = 10;
 
 uint8_t tmc5072_getNodeAddress(uint16_t icID) {
-  return (IC_ID);
+  return nodeAddress;
+}
+
+TMC5072BusType tmc5072_getBusType(uint16_t icID) {
+  return activeBus;
+}
+
+void tmc5072_readWriteSPI(uint16_t icID, uint8_t *data, size_t dataLength){
+
 }
 
 bool tmc5072_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength) {
@@ -105,7 +115,7 @@ void setup() {
   // tmc5072_writeRegister(IC_ID, TMC5072_SLAVECONF, 0x00000001); //SLAVEADDR to 1
   // delay(500);
 
-  initAllMotors();
+  initAllMotors(IC_ID);
 
 }
 
