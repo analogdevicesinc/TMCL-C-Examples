@@ -111,9 +111,10 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  
-  tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(0));  //read out XACTUAL of motor 1
-  tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(1));  //read out XACTUAL of motor 2
+  Serial.print("X Actual, Motor 0: 0x");
+  Serial.println(tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(0)), HEX);  //read out XACTUAL of motor 1
+  Serial.print("X Actual, Motor 1: 0x");
+  Serial.println(tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(1)), HEX);  //read out XACTUAL of motor 2
   
   tmc5072_writeRegister(IC_ID, TMC5072_XTARGET(0), 0x0007D000);
   //XTARGET=512000 | 10 revolutions with micro step = 256
@@ -122,8 +123,10 @@ void loop() {
   
   delay(15000);
 
-  tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(0));  //read out XACTUAL of motor 1
-  tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(1));  //read out XACTUAL of motor 2
+  Serial.print("X Actual, Motor 0: 0x");
+  Serial.println(tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(0)), HEX);  //read out XACTUAL of motor 1
+  Serial.print("X Actual, Motor 1: 0x");
+  Serial.println(tmc5072_readRegister(IC_ID, TMC5072_XACTUAL(1)), HEX);  //read out XACTUAL of motor 2
 
   tmc5072_writeRegister(IC_ID, TMC5072_XTARGET(0), 0x00000000); //XTARGET=0
   tmc5072_writeRegister(IC_ID, TMC5072_XTARGET(1), 0x00000000); //XTARGET=0
