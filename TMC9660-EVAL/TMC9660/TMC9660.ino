@@ -59,7 +59,6 @@ bool readWriteUART(uint8_t *data, size_t writeLength, size_t readLength) {
   // Wait for write echo
   while (Serial3.available() < writeLength) {
     if (millis() - startTime >= 1000) {
-      Serial.println(" Serial Write Timeout!");
       return false;
     }
   }
@@ -68,9 +67,6 @@ bool readWriteUART(uint8_t *data, size_t writeLength, size_t readLength) {
   startTime = millis();
   while (Serial3.available() < readLength) {
     if (millis() - startTime >= 1000) {
-      Serial.println("Serial Read Timeout!");
-      pinMode(13, OUTPUT);
-      digitalWrite(13, HIGH);
       return false;  // Timeout
     }
   }
@@ -154,7 +150,6 @@ void loop() {
     Serial.readBytes(buffer, 5);
     
     if (processTunnelBL(buffer, BUFFER_SIZE) == -1) {
-      Serial.write("Something went wrong");
       digitalWrite(LED, HIGH);
     }
   }
