@@ -3,6 +3,10 @@
 * This software is proprietary to Analog Devices, Inc. and its licensors.
 *******************************************************************************/
 
+extern "C" {
+#include "TMC9660_STEPPER_PARAM_HW_Abstraction.h"
+}
+
 /* 
  * Arduino Pins       Eval Board Pins
  * 51 MOSI            32 SPI1_SDI
@@ -17,6 +21,13 @@
  * 49 RESET_CTRL       19 DIO8
  */
 
+typedef enum{
+  BOOTSTRAPPING,
+  GET_MODULE_ID,
+  RUN_EXAMPLE,
+  IDLE,
+}Commands;
+static Commands cmd = IDLE;
 
 typedef enum {
   IC_BUS_UART,
@@ -115,6 +126,63 @@ static int processTunnelBL(uint8_t* buffer, int size) {
   return 0;
 }
 
+static uint8_t calcCheckSum(uint8_t *data, uint32_t bytes)
+{
+    uint8_t checkSum = 0;
+
+    for (uint32_t i = 0; i < bytes; i++) { checkSum += data[i]; }
+    return checkSum;
+}
+
+static int processTunnelApp(uint8_t operation, uint8_t type, uint8_t motor, uint32_t *value) {
+  uint8_t data[9] = { 0 };
+
+  data[0] = 0x01;       // Module Address
+  data[1] = operation;  //Operation
+  data[2] = type;       //type
+  data[3] = motor;      //motor
+  data[4] = (*value >> 24) & 0xFF;
+  data[5] = (*value >> 16) & 0xFF;
+  data[6] = (*value >> 8) & 0xFF;
+  data[7] = (*value) & 0xFF;
+  data[8] = calcCheckSum(data, 8);
+
+  if (!readWriteUART(&data[0], 9, 9)) {
+    return -1;
+  }
+
+  // Byte 8: CRC correct?
+  if (data[8] != calcCheckSum(data, 8)) {
+    return -2;
+  }
+
+  *value = ((uint32_t) data[4] << 24) | ((uint32_t) data[5] << 16) | ((uint32_t) data[6] << 8) | data[7];
+  
+  Serial.write(&data[2], 6);
+  Serial.flush();
+
+  return 0;
+}
+
+static void writeParameter(uint16_t type, uint8_t motor, uint32_t value) {
+  uint32_t *val = &value;
+  uint8_t tmclMotor = motor | ((type & 0xF00) >> 4);
+  uint8_t tmclType = type & 0xFF;
+  processTunnelApp(5, tmclType, tmclMotor, val);
+}
+
+static void rotateMotorOpenLoop(uint32_t targetVelocity) {
+  writeParameter(TMC9660_STEPPER_PARAM_EVAL_MOTOR_TYPE, 0, 2); // STEPPER_MOTOR
+  writeParameter(TMC9660_STEPPER_PARAM_EVAL_OPENLOOP_VOLTAGE, 0, 1000);
+  writeParameter(TMC9660_STEPPER_PARAM_EVAL_COMMUTATION_MODE, 0, 3);  // FOC_OPENLOOP_VOLTAGE_MODE
+  writeParameter(TMC9660_STEPPER_PARAM_EVAL_TARGET_VELOCITY, 0, targetVelocity);
+
+  delay(5000);
+
+  writeParameter(TMC9660_STEPPER_PARAM_EVAL_TARGET_VELOCITY, 0, 0);
+  writeParameter(TMC9660_STEPPER_PARAM_EVAL_COMMUTATION_MODE, 0, 0);  // SYSTEM_OFF
+}
+
 void setup() {
 
   pinMode(LED, OUTPUT);
@@ -145,12 +213,32 @@ void setup() {
 }
 
 void loop() {
+  while (1) {
+    if (Serial.available() > 0) {
+      Serial.readBytes(buffer, BUFFER_SIZE);
 
-  if (Serial.available() > 0) {
-    Serial.readBytes(buffer, 5);
-    
-    if (processTunnelBL(buffer, BUFFER_SIZE) == -1) {
-      digitalWrite(LED, HIGH);
+      if (buffer[0] == 0xAA) {
+        cmd = BOOTSTRAPPING;
+        digitalWrite(LED, LOW);
+        continue;
+        
+      } else if (buffer[0] == 0xBB) {
+        uint32_t val = 0;
+        int status = processTunnelApp(136, 1, 0, &val);
+        if (status == -1 || status == -2) {
+          digitalWrite(LED, HIGH);
+        }
+      } else if (buffer[0] == 0xCC) {
+        rotateMotorOpenLoop(50000);
+      }
+
+      switch (cmd) {
+        case BOOTSTRAPPING:
+          if (processTunnelBL(buffer, BUFFER_SIZE) == -1) {
+            digitalWrite(LED, HIGH);
+          }
+          break;
+      }
     }
   }
 }
