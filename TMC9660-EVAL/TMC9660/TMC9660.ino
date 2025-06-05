@@ -2,6 +2,7 @@
 * Copyright © 2025 Analog Devices Inc. All Rights Reserved.
 * This software is proprietary to Analog Devices, Inc. and its licensors.
 *******************************************************************************/
+#include <SPI.h>
 
 extern "C" {
 #include "TMC9660_STEPPER_PARAM_HW_Abstraction.h"
@@ -34,7 +35,7 @@ typedef enum {
   IC_BUS_SPI,
 } TMC9660BusType;
 
-static TMC9660BusType activeBus = IC_BUS_UART;
+static TMC9660BusType activeBus = IC_BUS_SPI;
 const int BUFFER_SIZE = 5;
 uint8_t buffer[BUFFER_SIZE] = { 0 };
 int HOLDN_FLASH = 41;
@@ -60,6 +61,18 @@ const uint8_t tmcCRCTable_Poly7Reflected[256] = {
     0xB4, 0x25, 0x57, 0xC6, 0xB3, 0x22, 0x50, 0xC1, 0xBA, 0x2B, 0x59, 0xC8, 0xBD, 0x2C, 0x5E, 0xCF,
 };
 
+void readWriteSPI(uint8_t *data, size_t dataLength) {
+  digitalWrite(PIN_SPI_SS, LOW);
+  delayMicroseconds(10);
+  for (uint32_t i = 0; i < dataLength; i++) {
+    data[i] = SPI.transfer(data[i]);
+  }
+
+  delayMicroseconds(10);
+  digitalWrite(PIN_SPI_SS, HIGH);
+    delayMicroseconds(10);
+
+}
 
 bool readWriteUART(uint8_t *data, size_t writeLength, size_t readLength) {
   Serial3.write(data, writeLength);
@@ -123,6 +136,12 @@ static int processTunnelBL(uint8_t* buffer, int size) {
     Serial.write(&data[2], 5);
     Serial.flush();
   }
+  else if(activeBus == IC_BUS_SPI){
+      // Send the data
+    readWriteSPI(buffer, 5);
+    Serial.write(&buffer[0], 5);
+    Serial.flush();
+  }
   return 0;
 }
 
@@ -135,32 +154,56 @@ static uint8_t calcCheckSum(uint8_t *data, uint32_t bytes)
 }
 
 static int processTunnelApp(uint8_t operation, uint8_t type, uint8_t motor, uint32_t *value) {
-  uint8_t data[9] = { 0 };
+  if (activeBus == IC_BUS_UART) {
+    uint8_t data[9] = { 0 };
+    data[0] = 0x01;       // Module Address
+    data[1] = operation;  //Operation
+    data[2] = type;       //type
+    data[3] = motor;      //motor
+    data[4] = (*value >> 24) & 0xFF;
+    data[5] = (*value >> 16) & 0xFF;
+    data[6] = (*value >> 8) & 0xFF;
+    data[7] = (*value) & 0xFF;
+    data[8] = calcCheckSum(data, 8);
 
-  data[0] = 0x01;       // Module Address
-  data[1] = operation;  //Operation
-  data[2] = type;       //type
-  data[3] = motor;      //motor
-  data[4] = (*value >> 24) & 0xFF;
-  data[5] = (*value >> 16) & 0xFF;
-  data[6] = (*value >> 8) & 0xFF;
-  data[7] = (*value) & 0xFF;
-  data[8] = calcCheckSum(data, 8);
+    if (!readWriteUART(&data[0], 9, 9)) {
+      return -1;
+    }
 
-  if (!readWriteUART(&data[0], 9, 9)) {
-    return -1;
+    // Byte 8: CRC correct?
+    if (data[8] != calcCheckSum(data, 8)) {
+      return -2;
+    }
+    *value = ((uint32_t)data[4] << 24) | ((uint32_t)data[5] << 16) | ((uint32_t)data[6] << 8) | data[7];
+
+    Serial.write(&data[2], 6);
+    Serial.flush();
+
+  } else if (activeBus == IC_BUS_SPI) {
+    uint8_t data[8] = { 0 };
+    data[0] = operation;  //Operation
+    data[1] = type;       //type
+    data[2] = motor;      //motor
+    data[3] = (*value >> 24) & 0xFF;
+    data[4] = (*value >> 16) & 0xFF;
+    data[5] = (*value >> 8) & 0xFF;
+    data[6] = (*value) & 0xFF;
+    data[7] = calcCheckSum(data, 7);
+
+    readWriteSPI(&data[0], 8);
+    delayMicroseconds(100);
+
+    do {
+      // Send another datagram to receive the previous response
+      memset(&data[0], 0, 8);
+
+      // Send the data
+      readWriteSPI(&data[0], 8);
+    } while (data[0] == 0xF0);
+
+    Serial.write(&data[0], 8);
+    Serial.flush();
   }
-
-  // Byte 8: CRC correct?
-  if (data[8] != calcCheckSum(data, 8)) {
-    return -2;
-  }
-
-  *value = ((uint32_t) data[4] << 24) | ((uint32_t) data[5] << 16) | ((uint32_t) data[6] << 8) | data[7];
-  
-  Serial.write(&data[2], 6);
-  Serial.flush();
-
   return 0;
 }
 
@@ -199,10 +242,20 @@ void setup() {
     digitalWrite(PIN_SPI_MOSI, LOW);
     digitalWrite(PIN_SPI_SS, LOW);
     digitalWrite(PIN_SPI_SCK, LOW);
+    pinMode(HOLDN_FLASH, OUTPUT);
+    digitalWrite(HOLDN_FLASH, HIGH);
   }
+else if (activeBus == IC_BUS_SPI) {
 
+  pinMode(PIN_SPI_SS, OUTPUT);
+  digitalWrite(PIN_SPI_SS, HIGH);
+  SPI.begin();
+  // SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE3));
+  SPI.beginTransaction(SPISettings(1875000, MSBFIRST, SPI_MODE3));
   pinMode(HOLDN_FLASH, OUTPUT);
-  digitalWrite(HOLDN_FLASH, HIGH);
+  digitalWrite(HOLDN_FLASH, LOW);
+}
+
   pinMode(RESET_CTRL, OUTPUT);
   digitalWrite(RESET_CTRL, HIGH);
   delay(10);
@@ -223,13 +276,17 @@ void loop() {
         continue;
         
       } else if (buffer[0] == 0xBB) {
+        cmd =IDLE ;
         uint32_t val = 0;
         int status = processTunnelApp(136, 1, 0, &val);
         if (status == -1 || status == -2) {
           digitalWrite(LED, HIGH);
         }
+        continue;
       } else if (buffer[0] == 0xCC) {
+        cmd =IDLE ;
         rotateMotorOpenLoop(50000);
+        continue;
       }
 
       switch (cmd) {
