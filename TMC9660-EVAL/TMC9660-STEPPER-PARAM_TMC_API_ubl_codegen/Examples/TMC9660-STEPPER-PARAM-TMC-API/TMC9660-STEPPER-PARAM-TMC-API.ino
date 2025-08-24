@@ -5,8 +5,8 @@
 
 extern "C" {
 #include "TMC9660.h"
-#include "CONFIG_Map.h"
-#include "TMC9660_STEPPER_PARAM_HW_Abstraction.h"
+#include "TMC9660_PARAM_HW_Abstraction.h"
+#include "TMC9660_BL_HW_Abstraction.h"
 }
 
 /* 
@@ -23,18 +23,18 @@ extern "C" {
 
 static TMC9660BusType activeBus = TMC9660_BUS_UART;
 static TMC9660BusAddresses busAddresses;
+
 int HOLDN_FLASH = 41;
 int RESET_CTRL = 49;
 int LED = 13;
 
+void setChipAddresses(uint16_t icID, uint8_t device, uint8_t host) {
+  busAddresses.device = device;
+  busAddresses.host = host;
+}
 
 TMC9660BusType tmc9660_getBusType(uint16_t icID) {
   return activeBus;
-}
-
-void tmc9660_setBusAddresses(uint16_t icID, uint8_t device, uint8_t host) {
-  busAddresses.device = device;
-  busAddresses.host = host;
 }
 
 TMC9660BusAddresses tmc9660_getBusAddresses(uint16_t icID) {
@@ -74,16 +74,16 @@ bool tmc9660_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, siz
 
 static void rotateMotorOpenLoop(uint32_t targetVelocity) {
 
-  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_STEPPER_PARAM_EVAL_MOTOR_TYPE, 2);  // STEPPER_MOTOR
-  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_STEPPER_PARAM_EVAL_OPENLOOP_VOLTAGE, 1000);
-  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_STEPPER_PARAM_EVAL_COMMUTATION_MODE, 3);  // FOC_OPENLOOP_VOLTAGE_MODE
-  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_STEPPER_PARAM_EVAL_TARGET_VELOCITY, targetVelocity);
+  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_PARAM_MOTOR_TYPE, 2);  // STEPPER_MOTOR
+  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_PARAM_OPENLOOP_VOLTAGE, 1000);
+  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_PARAM_COMMUTATION_MODE, 3);  // FOC_OPENLOOP_VOLTAGE_MODE
+  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_PARAM_TARGET_VELOCITY, targetVelocity);
   Serial.println("Rotating motor in openloop mode for 5 secs");
 
   delay(5000);
 
-  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_STEPPER_PARAM_EVAL_TARGET_VELOCITY, 0);
-  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_STEPPER_PARAM_EVAL_COMMUTATION_MODE, 0);  // SYSTEM_OFF
+  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_PARAM_TARGET_VELOCITY, 0);
+  tmc9660_param_setParameter(DEFAULT_IC, TMC9660_PARAM_COMMUTATION_MODE, 0);  // SYSTEM_OFF
   Serial.println("Motor Stopped");
 }
 
