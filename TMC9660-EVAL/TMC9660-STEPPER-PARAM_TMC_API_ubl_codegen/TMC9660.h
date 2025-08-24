@@ -10,7 +10,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-//#include "TMC9660_HW_Abstraction.h"
 
 /*******************************************************************************
 * API Configuration Defines
@@ -164,7 +163,6 @@ extern bool tmc9660_isFaultPinAsserted(uint16_t icID);
 
 extern TMC9660BusType tmc9660_getBusType(uint16_t icID);
 extern TMC9660BusAddresses tmc9660_getBusAddresses(uint16_t icID);
-extern void tmc9660_setBusAddresses(uint16_t icID, uint8_t device, uint8_t host);
 
 // ToDo: Make the timing function & callback usable with multiple TMC-API chips in use.
 extern uint32_t tmc_getMicrosecondTimestamp();
@@ -180,10 +178,14 @@ void tmc9660_waitForFaultDeassertion(uint16_t icID);
 #endif
 
 /*** TMC9660 Bootloader Mode functions ****************************************/
-int8_t tmc9660_bl_sendCommand(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue);
+int32_t tmc9660_bl_sendCommand(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue);
 
 /*** TMC9660 Parameter Mode functions *****************************************/
 int32_t tmc9660_param_sendCommand(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue);
+
+// Special case commands: These two functions run commands that are edge cases of the underlying protocol
+int32_t tmc9660_param_getVersionASCII(uint16_t icID, uint8_t *versionString);
+int32_t tmc9660_param_returnToBootloader(uint16_t icID);
 
 uint32_t tmc9660_param_getParameter(uint16_t icID, uint16_t type);
 bool tmc9660_param_setParameter(uint16_t icID, uint16_t type, uint32_t value);
@@ -191,6 +193,11 @@ bool tmc9660_param_setParameter(uint16_t icID, uint16_t type, uint32_t value);
 uint32_t tmc9660_param_getGlobalParameter(uint16_t icID, uint16_t index);
 bool tmc9660_param_setGlobalParameter(uint16_t icID, uint16_t index, uint32_t value);
 
-void setChipAddresses(uint16_t icID, uint8_t device, uint8_t host);
+/*** TMC9660 Register Mode functions *****************************************/
+int32_t tmc9660_reg_sendCommand(uint16_t icID, uint8_t cmd, uint16_t registerOffset, uint8_t registerBlock, uint32_t writeValue, uint32_t *readValue);
+
+// Special case commands: These two functions run commands that are edge cases of the underlying protocol
+int32_t tmc9660_reg_getVersionASCII(uint16_t icID, uint8_t *versionString);
+int32_t tmc9660_reg_returnToBootloader(uint16_t icID);
 
 #endif /* TMC_IC_TMC9660_H_ */
