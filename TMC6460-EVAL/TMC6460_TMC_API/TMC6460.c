@@ -1,17 +1,12 @@
 /*******************************************************************************
-* Copyright © 2025 Analog Devices Inc. All Rights Reserved.
+* Copyright © 2026 Analog Devices Inc. All Rights Reserved.
 * This software is proprietary to Analog Devices, Inc. and its licensors.
 *******************************************************************************/
 
-/*
- * TMC6460.c
- *
- *  Created on: 31.07.2023
- *      Author: LH
- */
-#include <string.h> // For memcpy
 
 #include "TMC6460.h"
+
+#include <string.h> // For memcpy
 
 // Internal bus implementations
 static int32_t readRegisterSPI(uint16_t icID, uint16_t address, uint32_t *readValue);
