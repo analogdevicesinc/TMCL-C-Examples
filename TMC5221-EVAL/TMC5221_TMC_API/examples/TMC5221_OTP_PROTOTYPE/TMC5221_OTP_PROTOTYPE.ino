@@ -20,8 +20,6 @@
 *   50 (MISO)        | 33          | SPI1_SDO
 *   52 (SCK)         | 31          | SPI1_SCK
 *   53 (SS)          | 30          | SPI1_CSN
-*   14 (TX3)         | 21          | UART_RX
-*   15 (RX3)         | 22          | UART_TX
 *   23 (D23)         | 19          | NSLEEP
 *   GND              | 02, 03      | GND
 *   GND              | 23 (CLK)    | GND
@@ -42,9 +40,7 @@ extern "C" {
 #define DISABLE_IREF_FAULT 0
 #define LOCK_OTP 1
 
-// Uncomment the below line to use UART for communication
 static TMC5221BusType activeBus = IC_BUS_SPI;
-//static TMC5221BusType activeBus = IC_BUS_UART;
 
 int NSLEEP = 23;
 int DRV_EN = 7;
@@ -64,26 +60,6 @@ void tmc5221_readWriteSPI(uint16_t icID, uint8_t *data, size_t dataLength) {
 
   delayMicroseconds(5);
   digitalWrite(nCS, HIGH);
-}
-
-bool tmc5221_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength)
-{
-    Serial3.write(data, writeLength);
-    delay(2); // Ensure this delay is appropriate for your setup
-
-    unsigned long startTime = millis();
-    
-    // Wait for write echo
-    while (Serial3.available() < readLength) {
-        if (millis() - startTime >= 1000) {
-          Serial.println("Serial Write Timeout!");
-          return false; // Timeout
-        }
-    }
-
-    // Read the actual response
-    Serial3.readBytes(data, readLength);
-    return true;
 }
 
 /*OTP Prototyping*/
@@ -197,10 +173,6 @@ void setup() {
     SPI.beginTransaction(SPISettings(3000000, MSBFIRST, SPI_MODE3)); // 3 MHz
   }
 
-  else if (activeBus == IC_BUS_UART) {
-    Serial3.begin(115200);
-  }
-
   // Toggle the TMC5221 NSLEEP pin to reset it
   digitalWrite(NSLEEP, LOW);
   delayMicroseconds(10);
@@ -208,12 +180,10 @@ void setup() {
 
   digitalWrite(DRV_EN, HIGH);
 
-  // Add delay for the communication to get stable. Removing this delay creates problem in reading data.
   delay(1000);
 }
 
 void loop() {
   prototype_otp();
   while(1){};
-
 }

@@ -53,7 +53,6 @@
 
 
 typedef enum {
-    IC_BUS_SPI,
     IC_BUS_IIC,
 } TMC5222BusType;
 
