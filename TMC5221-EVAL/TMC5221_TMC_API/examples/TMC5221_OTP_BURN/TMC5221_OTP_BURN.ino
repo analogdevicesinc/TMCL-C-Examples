@@ -3,20 +3,21 @@
 *******************************************************************************/
 
 /*******************************************************************************
-  Example of burning the OTP with TMC5221.
-  It is highly recommended to prototype the desired OTP settings before actual burning.
-  Prototyping can be done with the script "mtp_prototype.py" in this folder.
+* Example of burning the OTP with TMC5221.
   
-  The IC has the ability to burn 80 records in total.
-  Exceeding this limit will not damage the device, but the burn procedure will be aborted and no changes will be made to the OTP.
+* It is highly recommended to prototype the desired OTP settings before actual burning.
+* Prototyping example can be found in the location TMC5221_TMC_API/TMC5221_OTP_PROTOTYPE.
+  
+* The IC has the ability to burn 80 records in total.
+* Exceeding this limit will not damage the device, but the burn procedure will be aborted and no changes will be made to the OTP.
 
-  A record with the same RECORD_TYPE (and REGISTER_ADDRESS, depending on the Type) will overwrite a previous one,
-  giving the ability to easily correct mistakes while burning.
-  Only when BLOCK_MTP_ACCESS is set to "True", the OTP will be locked and no further changes are possible anymore, not even overwriting existing records.
+* A record with the same RECORD_TYPE (and REGISTER_ADDRESS, depending on the Type) will overwrite a previous one,
+* giving the ability to easily correct mistakes while burning.
+* Only when BLOCK_MTP_ACCESS is set to "True", the OTP will be locked and no further changes are possible anymore, not even overwriting existing records.
 
-  OTP burning needs a stable Supply Voltage of 8.7V ± 0.13V (1.5%).
-  Do not program while the motor is in operation.
-*
+* OTP burning needs a stable Supply Voltage of 8.7V ± 0.13V (1.5%).
+* Do not program while the motor is in operation.
+
 * Arduino MEGA to TMC5221 Eval Board Wiring:
 *   Arduino MEGA Pin | TMC5221 Pin | Signal
 *   -----------------|-------------|------------------
