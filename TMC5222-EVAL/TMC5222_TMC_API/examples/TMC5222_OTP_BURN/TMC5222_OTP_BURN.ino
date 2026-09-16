@@ -4,8 +4,9 @@
 
 /*******************************************************************************
 * Example of burning the OTP with TMC5222.
+*
 * It is highly recommended to prototype the desired OTP settings before actual burning.
-* Prototyping can be done with the script "mtp_prototype.py" in this folder.
+* Prototyping example can be found in the location TMC5222_TMC_API/TMC5222_OTP_PROTOTYPE.
 *  
 * The IC has the ability to burn 80 records in total.
 * Exceeding this limit will not damage the device, but the burn procedure will be aborted and no changes will be made to the OTP.
