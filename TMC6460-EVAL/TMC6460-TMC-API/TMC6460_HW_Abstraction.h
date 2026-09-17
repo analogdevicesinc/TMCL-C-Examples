@@ -1,9 +1,6 @@
 /*******************************************************************************
-* Copyright © 2026 Analog Devices Inc. All Rights Reserved.
-* This software is proprietary to Analog Devices, Inc. and its licensors.
+* Copyright © 2026 Analog Devices, Inc.
 *******************************************************************************/
-
-// This file was generated. Do not modify it manually!
 
 #ifndef TMC_IC_TMC6460_HW_ABSTRACTION_H_
 #define TMC_IC_TMC6460_HW_ABSTRACTION_H_
@@ -1341,12 +1338,12 @@ typedef struct {
 #define TMC6460_FOC_PID_UQ_UD_LIMITS_FIELD                                  ((TMC6460RegisterField) {.mask=TMC6460_FOC_PID_UQ_UD_LIMITS_MASK, .shift=TMC6460_FOC_PID_UQ_UD_LIMITS_SHIFT, .addr=TMC6460_FOC_PID_UQ_UD_LIMITS, .isSigned=false })
 
 // FOC.PID_TORQUE_FLUX_LIMITS fields
-#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_FLUX_LIMIT_MASK              0x00007FFF
-#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_FLUX_LIMIT_SHIFT             0
-#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_FLUX_LIMIT_FIELD             ((TMC6460RegisterField) {.mask=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_FLUX_LIMIT_MASK, .shift=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_FLUX_LIMIT_SHIFT, .addr=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS, .isSigned=false })
-#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_TORQUE_LIMIT_MASK            0x7FFF0000
-#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_TORQUE_LIMIT_SHIFT           16
-#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_TORQUE_LIMIT_FIELD           ((TMC6460RegisterField) {.mask=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_TORQUE_LIMIT_MASK, .shift=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_PID_TORQUE_LIMIT_SHIFT, .addr=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS, .isSigned=false })
+#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_FLUX_MASK                        0x00007FFF
+#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_FLUX_SHIFT                       0
+#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_FLUX_FIELD                       ((TMC6460RegisterField) {.mask=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_FLUX_MASK, .shift=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_FLUX_SHIFT, .addr=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS, .isSigned=false })
+#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_TORQUE_MASK                      0x7FFF0000
+#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_TORQUE_SHIFT                     16
+#define TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_TORQUE_FIELD                     ((TMC6460RegisterField) {.mask=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_TORQUE_MASK, .shift=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS_TORQUE_SHIFT, .addr=TMC6460_FOC_PID_TORQUE_FLUX_LIMITS, .isSigned=false })
 
 // FOC.PID_VELOCITY_LIMIT fields
 #define TMC6460_FOC_PID_VELOCITY_LIMIT_MASK                                 0x7FFFFFFF

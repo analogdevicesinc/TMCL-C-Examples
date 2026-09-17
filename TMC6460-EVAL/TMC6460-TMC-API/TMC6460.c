@@ -1,17 +1,11 @@
 /*******************************************************************************
-* Copyright © 2025 Analog Devices Inc. All Rights Reserved.
-* This software is proprietary to Analog Devices, Inc. and its licensors.
+* Copyright © 2026 Analog Devices, Inc.
 *******************************************************************************/
 
-/*
- * TMC6460.c
- *
- *  Created on: 31.07.2023
- *      Author: LH
- */
-#include <string.h> // For memcpy
 
 #include "TMC6460.h"
+
+#include <string.h> // For memcpy
 
 // Internal bus implementations
 static int32_t readRegisterSPI(uint16_t icID, uint16_t address, uint32_t *readValue);
@@ -305,7 +299,10 @@ static bool isRTMIDatagramHeader(uint8_t byte_value)
 static bool handleRTMIDatagram(uint16_t icID, uint8_t *data)
 {
     uint8_t rtmiStatus = data[0];
-    uint32_t rtmiValue = ((uint32_t) data[1] << 24) | ((uint32_t) data[2] << 16) | ((uint32_t) data[3] << 8) | data[4];
+    uint32_t rtmiValue = ((uint32_t) data[1] << 24)
+                       | ((uint32_t) data[2] << 16)
+                       | ((uint32_t) data[3] << 8)
+                       | ((uint32_t) data[4]);
     return tmc6460_RTMIDataCallback(icID, rtmiStatus, rtmiValue);
 }
 
