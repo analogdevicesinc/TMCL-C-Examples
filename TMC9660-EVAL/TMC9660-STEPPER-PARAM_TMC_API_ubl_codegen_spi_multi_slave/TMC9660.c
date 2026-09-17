@@ -1,10 +1,11 @@
 /*******************************************************************************
-* Copyright © 2025 Analog Devices Inc. All Rights Reserved.
-* This software is proprietary to Analog Devices, Inc. and its licensors.
+* Copyright © 2025 Analog Devices, Inc.
 *******************************************************************************/
 
 
 #include "TMC9660.h"
+
+#define SPI_DEFAULT_DELAY 100 // [us]
 
 #define TMC9660_ADDON_MIN_SIZE 48
 
@@ -22,7 +23,7 @@ void tmc_delayMicroseconds(uint32_t microseconds)
     while (tmc_getMicrosecondTimestamp() - timestamp < microseconds);
 }
 
-#ifdef TMC_API_EXTERNAL_CRC_TABLE
+#if TMC_API_EXTERNAL_CRC_TABLE
 extern const uint8_t tmcCRCTable_Poly7Reflected[256];
 extern const uint32_t tmcCRCTable_Poly104C11DB7Reflected[256];
 #else
@@ -84,12 +85,15 @@ const uint32_t tmcCRCTable_Poly104C11DB7Reflected[256] = {
 #endif
 
 // Helper functions
-static int32_t tmc9660_bl_sendCommand_SPI(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue, uint32_t extraDelay);
+static int32_t tmc9660_bl_sendCommand_SPI(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue, uint32_t delay);
 static int32_t tmc9660_bl_sendCommand_UART(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue);
 static int32_t tmc9660_param_sendCommand_SPI(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue);
-static int32_t tmc9660_param_spiSingleRequest(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue, bool poll);
+static int32_t tmc9660_param_spiSingleRequest(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue, bool poll, uint32_t timeout_us);
+static int32_t tmc9660_param_getVersionASCII_SPI(uint16_t icID, uint8_t *versionString);
+static int32_t tmc9660_param_returnToBootloader_SPI(uint16_t icID);
 static int32_t tmc9660_param_sendCommand_UART(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue);
 static int32_t tmc9660_param_getVersionASCII_UART(uint16_t icID, uint8_t *versionString);
+static int32_t tmc9660_param_readTMCLMemory_UART(uint16_t icID, uint32_t cmdIndex, uint8_t *command);
 static int32_t tmc9660_param_returnToBootloader_UART(uint16_t icID);
 static int32_t tmc9660_reg_sendCommand_UART(uint16_t icID, uint8_t cmd, uint16_t registerOffset, uint8_t registerBlock, uint32_t writeValue, uint32_t *readValue);
 
@@ -97,11 +101,27 @@ static uint8_t calcParamChecksum(uint8_t *data, uint32_t bytes);
 static uint8_t CRC8(uint8_t *data, uint32_t bytes);
 
 /*** General functions implementation ********************************************/
-#if TMC_API_TMC9660_FAULT_PIN_SUPPORTED == 1
-void tmc9660_waitForFaultDeassertion(uint16_t icID)
+#if TMC_API_TMC9660_FAULT_PIN_SUPPORTED != 0
+bool tmc9660_waitForFaultDeassertion(uint16_t icID, uint32_t timeout_us)
 {
-    // ToDo: Support timeouts
-    while (tmc9660_isFaultPinAsserted(icID));
+    uint32_t timestamp = 0;
+    if (timeout_us != 0)
+    {
+        timestamp = tmc_getMicrosecondTimestamp();
+    }
+
+    while (tmc9660_isFaultPinAsserted(icID))
+    {
+        if (timeout_us == 0)
+            continue;
+
+        // Timeout reached? If yes, return failure
+        if ((tmc_getMicrosecondTimestamp() - timestamp) > timeout_us)
+            return false;
+    }
+
+    // Fault deassertion completed, return success
+    return true;
 }
 #endif
 
@@ -113,17 +133,17 @@ int32_t tmc9660_bl_sendCommand(uint16_t icID, uint8_t cmd, uint32_t writeValue, 
 
     if(bus == TMC9660_BUS_SPI)
     {
-        return tmc9660_bl_sendCommand_SPI(icID, cmd, writeValue, readValue, 0);
+        return tmc9660_bl_sendCommand_SPI(icID, cmd, writeValue, readValue, SPI_DEFAULT_DELAY);
     }
     else if(bus == TMC9660_BUS_UART)
     {
         return tmc9660_bl_sendCommand_UART(icID, cmd, writeValue, readValue);
     }
 
-    return -1;
+    return TMC9660_ERROR_INVALID_BUS;
 }
 
-static int32_t tmc9660_bl_sendCommand_SPI(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue, uint32_t extraDelay)
+static int32_t tmc9660_bl_sendCommand_SPI(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue, uint32_t delay)
 {
     uint8_t data[5] = { 0 };
 
@@ -135,19 +155,23 @@ static int32_t tmc9660_bl_sendCommand_SPI(uint16_t icID, uint8_t cmd, uint32_t w
 
     // Send the request
     tmc9660_readWriteSPI(icID, &data[0], 5, false);
-    tmc_delayMicroseconds(50 + extraDelay);
+    tmc_delayMicroseconds(delay);
 
     if (readValue)
     {
         data[0] = TMC9660_BLCMD_NO_OP;
         tmc9660_readWriteSPI(icID, &data[0], 5, false);
-        tmc_delayMicroseconds(50);
+        tmc_delayMicroseconds(SPI_DEFAULT_DELAY);
 
-        *readValue = ((uint32_t)data[1] << 24) | ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 8) | data[4];
+        *readValue = ((uint32_t) data[1] << 24)
+                   | ((uint32_t) data[2] << 16)
+                   | ((uint32_t) data[3] << 8)
+                   | ((uint32_t) data[4]);
+
         return data[0];
     }
 
-    return 0;
+    return data[0];
 }
 
 static int32_t tmc9660_bl_sendCommand_UART(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue)
@@ -165,12 +189,15 @@ static int32_t tmc9660_bl_sendCommand_UART(uint16_t icID, uint8_t cmd, uint32_t 
     data[7] = CRC8(data, 7);
 
     if (!tmc9660_readWriteUART(icID, &data[0], 8, 8)) {
-      return -1;
+      return TMC9660_ERROR_INVALID_BUS;
     }
 
     if (readValue)
     {
-        *readValue = ((uint32_t)data[3] << 24) | ((uint32_t)data[4] << 16) | ((uint32_t)data[5] << 8) | data[6];
+        *readValue = ((uint32_t) data[3] << 24)
+                   | ((uint32_t) data[4] << 16)
+                   | ((uint32_t) data[5] << 8)
+                   | ((uint32_t) data[6]);
     }
 
     // Workaround: Wait a short moment before proceeding
@@ -196,7 +223,7 @@ static uint8_t CRC8(uint8_t *data, uint32_t bytes)
     return result;
 }
 
-static uint32_t CRC32(uint8_t *data, uint32_t bytes)
+static uint32_t CRC32(const uint8_t *data, uint32_t bytes)
 {
     uint32_t result;
 
@@ -209,12 +236,14 @@ static uint32_t CRC32(uint8_t *data, uint32_t bytes)
     return result ^ 0xFFFFFFFF;
 }
 
-int32_t tmc9660_bl_installAddon(uint16_t icID, uint8_t *addon, uint32_t addonSize)
+int32_t tmc9660_bl_installAddon(uint16_t icID, const uint8_t *addon, uint32_t addonSize)
 {
+    uint32_t count = 0;
+
     if (addonSize < TMC9660_ADDON_MIN_SIZE)
-        return -10; // ToDo: What error number?
+        return (TMC9660_ERROR_INVALID_ADDON * (1<<16)) + count;
     if (addonSize % 8 != 0)
-        return -10; // ToDo: What error number?
+        return (TMC9660_ERROR_INVALID_ADDON * (1<<16)) + count;
 
     TMC9660BusType bus = tmc9660_getBusType(icID);
 
@@ -222,100 +251,110 @@ int32_t tmc9660_bl_installAddon(uint16_t icID, uint8_t *addon, uint32_t addonSiz
     int32_t err = 0;
 
     // Check that the addon fits into SRAM
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_GET_INFO, 6, &value);
-    if (err < 0)
-        return err;
+    // Note: First command - we got to allow SESSION_START and BOOTLOADER_RESUMED status here
+    (count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_GET_INFO, 6, &value));
+    if (err != 0 && err != 19 && err != 21)
+        return (err * (1<<16)) + count;
 
     if (value < addonSize)
-        return -11; // ToDo: What error number?
+        return (TMC9660_ERROR_NO_ADDON_SPACE * (1<<16)) + count;
 
     // Grab the start of the SRAM region
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_GET_INFO, 5, &value);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_GET_INFO, 5, &value)) != 0)
+        return (err * (1<<16)) + count;
 
     uint32_t startAddr = value;
 
     // Select the SRAM
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_BANK, 0, NULL);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_BANK, 0, NULL)) != 0)
+        return (err * (1<<16)) + count;
 
     // Set the upload start address (skipping the addon's length and checksum bytes)
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, startAddr + 8, NULL);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, startAddr + 8, NULL)) != 0)
+        return (err * (1<<16)) + count;
 
     for (size_t i = 8; i < addonSize; i+= 4)
     {
-        value = (uint32_t) addon[i]
+        value = ((uint32_t) addon[i])
               | ((uint32_t) addon[i+1] << 8)
               | ((uint32_t) addon[i+2] << 16)
               | ((uint32_t) addon[i+3] << 24);
 
-        // ToDo: Pipeline the SPI-based upload
-        err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_WRITE_32_INC, value, NULL);
-        if (err < 0)
-            return err;
+        if (bus == TMC9660_BUS_SPI)
+        {
+            // The RAM WRITE_32_INC commands don't take that long, 15µs delay is sufficient.
+            if ((count++, err = tmc9660_bl_sendCommand_SPI(icID, TMC9660_BLCMD_WRITE_32_INC, value, NULL, 15)) != 0)
+                return (err * (1<<16)) + count;
+        }
+        else
+        {
+            if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_WRITE_32_INC, value, NULL)) != 0)
+                return (err * (1<<16)) + count;
+        }
     }
 
     // Set the addon start address
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, startAddr, NULL);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, startAddr, NULL)) != 0)
+        return (err * (1<<16)) + count;
 
     // Write the addon length
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_WRITE_32, addonSize, NULL);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_WRITE_32, addonSize, NULL)) != 0)
+        return (err * (1<<16)) + count;
 
     // Write the addon checksum - for SPI we need extra delay here
     uint32_t checksum = CRC32(&addon[8], addonSize-8);
 
-    // The checksum and start commands have a certain overhead based on the size of app they're checking
-    // For this RAM-based upload, the check comes out at roughly [byte size]/2 µs
-    // ToDo: Fine-tune this heuristic
-    uint32_t extraDelay = addonSize / 2;
-    if(bus == TMC9660_BUS_SPI)
+    // Both the checksum writing and the start command take slightly longer than
+    // other commands. For UART this has no special impact, as the protocol
+    // naturally waits for the response. For SPI we have to inject a small
+    // delay to ensure we don't act too fast.
+
+    if (bus == TMC9660_BUS_SPI)
     {
-        // This is one of the few slow commands - add extra delay before proceeding
-        // Also query for the reply value here so the SPI-based command actually checks for the status
-        err = tmc9660_bl_sendCommand_SPI(icID, TMC9660_BLCMD_WRITE_CHECKSUM, checksum, &value, extraDelay);
+        // We need more delay here - roughly 0.375µs / byte
+        uint32_t delay = SPI_DEFAULT_DELAY + (addonSize / 8)*3;
+
+        // Even though we don't check the value here, we still request it.
+        // causes the underlying SPI function to actually read back the status of the command.
+        if ((count++, err = tmc9660_bl_sendCommand_SPI(icID, TMC9660_BLCMD_WRITE_CHECKSUM, checksum, &value, delay)) != 0)
+            return (err * (1<<16)) + count;
+
+        // Start the addon installation on the TMC9660
+        if ((count++, err = tmc9660_bl_sendCommand_SPI(icID, TMC9660_BLCMD_START_APP, 0, NULL, delay)) != 0)
+            return (err * (1<<16)) + count;
     }
     else
     {
-        err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_WRITE_CHECKSUM, checksum, NULL);
+        // Write the checksum
+        if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_WRITE_CHECKSUM, checksum, NULL)) != 0)
+            return (err * (1<<16)) + count;
+
+        // Start the addon installation on the TMC9660
+        if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_START_APP, 0, NULL)) != 0)
+            return (err * (1<<16)) + count;
     }
-
-    if (err < 0)
-        return err;
-
-    // Start the addon installation on the TMC9660
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_START_APP, 0, NULL);
-    if (err < 0)
-        return err;
 
     return 0;
 }
 
 int32_t tmc9660_bl_getAddonInfo(uint16_t icID, uint32_t *id, uint32_t *version)
 {
+    uint32_t count = 0;
     int32_t err;
     uint32_t value;
 
     // Select the SRAM
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_BANK, 0, NULL);
-    if (err < 0)
-        return err;
+    // Note: First command - we got to allow SESSION_START and BOOTLOADER_RESUMED status here
+    (count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_BANK, 0, NULL));
+    if (err != 0 && err != 19 && err != 21)
+        return (err * (1<<16)) + count;
 
     // Check for the presence of an addon by checking the addon key
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, TMC9660_ADDON_KEY_ADDR, NULL);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, TMC9660_ADDON_KEY_ADDR, NULL)) != 0)
+        return (err * (1<<16)) + count;
 
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_READ_32, 0, &value);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_READ_32, 0, &value)) != 0)
+        return (err * (1<<16)) + count;
 
     if (value != TMC9660_ADDON_KEY)
     {
@@ -324,19 +363,16 @@ int32_t tmc9660_bl_getAddonInfo(uint16_t icID, uint32_t *id, uint32_t *version)
     }
 
     // Addon is present, read out the metadata
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, TMC9660_ADDON_METADATA_ADDR, NULL);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_SET_ADDRESS, TMC9660_ADDON_METADATA_ADDR, NULL)) != 0)
+        return (err * (1<<16)) + count;
 
     // Readout the ID
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_READ_32_INC, 0, id);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_READ_32_INC, 0, id)) != 0)
+        return (err * (1<<16)) + count;
 
     // Readout the version
-    err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_READ_32, 0, version);
-    if (err < 0)
-        return err;
+    if ((count++, err = tmc9660_bl_sendCommand(icID, TMC9660_BLCMD_READ_32, 0, version)) != 0)
+        return (err * (1<<16)) + count;
 
     return 1;
 }
@@ -358,7 +394,7 @@ int32_t tmc9660_param_sendCommand(uint16_t icID, uint8_t cmd, uint16_t type, uin
         return tmc9660_param_sendCommand_UART(icID, cmd, type, index, writeValue, readValue);
     }
 
-    return -1;
+    return TMC9660_ERROR_INVALID_BUS;
 }
 
 int32_t tmc9660_param_getVersionASCII(uint16_t icID, uint8_t *versionString)
@@ -367,14 +403,31 @@ int32_t tmc9660_param_getVersionASCII(uint16_t icID, uint8_t *versionString)
 
     if(bus == TMC9660_BUS_SPI)
     {
-        // ToDo: SPI support
+        return tmc9660_param_getVersionASCII_SPI(icID, versionString);
     }
     else if(bus == TMC9660_BUS_UART)
     {
         return tmc9660_param_getVersionASCII_UART(icID, versionString);
     }
 
-    return -1;
+    return TMC9660_ERROR_INVALID_BUS;
+}
+
+int32_t tmc9660_param_readTMCLMemory(uint16_t icID, uint32_t cmdIndex, uint8_t *command)
+{
+    TMC9660BusType bus = tmc9660_getBusType(icID);
+
+    if(bus == TMC9660_BUS_SPI)
+    {
+        // This special-case command does not work over SPI
+        return TMC9660_ERROR_INVALID_BUS;
+    }
+    else if(bus == TMC9660_BUS_UART)
+    {
+        return tmc9660_param_readTMCLMemory_UART(icID, cmdIndex, command);
+    }
+
+    return TMC9660_ERROR_INVALID_BUS;
 }
 
 int32_t tmc9660_param_returnToBootloader(uint16_t icID)
@@ -383,14 +436,14 @@ int32_t tmc9660_param_returnToBootloader(uint16_t icID)
 
     if(bus == TMC9660_BUS_SPI)
     {
-        // ToDo: SPI support
+        return tmc9660_param_returnToBootloader_SPI(icID);
     }
     else if(bus == TMC9660_BUS_UART)
     {
         return tmc9660_param_returnToBootloader_UART(icID);
     }
 
-    return -1;
+    return TMC9660_ERROR_INVALID_BUS;
 }
 
 static bool sendRequestUART(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint8_t *data, TMC9660BusAddresses addresses, bool expectReply)
@@ -413,72 +466,102 @@ static bool sendRequestUART(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t i
 static int32_t tmc9660_param_sendCommand_SPI(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue)
 {
     // Send the command request
-    tmc9660_param_spiSingleRequest(icID, cmd, type, index, writeValue, readValue, false);
+    tmc9660_param_spiSingleRequest(icID, cmd, type, index, writeValue, readValue, false, 0);
 
-    // Get the reply with a NOOP request
-    return tmc9660_param_spiSingleRequest(icID, 0xFF, 0, 0, 0, readValue, true);
+    // Get the reply with a NOOP request with a 10ms (10000µs) timeout
+    return tmc9660_param_spiSingleRequest(icID, 0xFF, 0, 0, 0, readValue, true, 10*1000);
 }
 
-static int32_t tmc9660_param_spiSingleRequest(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue, bool poll)
+static bool sendRequestSPI(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint8_t *data, bool poll, uint32_t timeout_us)
 {
-    union {
-        uint8_t bytes[8];
-        uint32_t words[2];
-    } data = { 0 };
-
-    data.bytes[0] = cmd;
-    data.bytes[1] = type & 0xFF;
-    data.bytes[2] = (type >> 8) << 4 | (index & 0x0F);
-    data.bytes[3] = (writeValue >> 24) & 0xFF;
-    data.bytes[4] = (writeValue >> 16) & 0xFF;
-    data.bytes[5] = (writeValue >> 8)  & 0xFF;
-    data.bytes[6] = (writeValue)       & 0xFF;
-    data.bytes[7] = calcParamChecksum(&data.bytes[0], 7);
+    uint32_t timestamp;
+    if (timeout_us)
+    {
+        timestamp = tmc_getMicrosecondTimestamp();
+    }
 
     if (poll)
     {
-        // Fast polling
         do {
+            // Fast polling with single byte requests
+
             if (TMC_API_TMC9660_ENABLE_SPI_POLL_RESUMING)
             {
                 // Zero-sized request to de-assert chip select
-                tmc9660_readWriteSPI(icID, &data.bytes[0], 0, false);
+                tmc9660_readWriteSPI(icID, &data[0], 0, false);
 
                 // Do a request for just one byte and keep the SPI transaction going
-                data.bytes[0] = cmd;
-                tmc9660_readWriteSPI(icID, &data.bytes[0], 1, true);
+                data[0] = cmd;
+                tmc9660_readWriteSPI(icID, &data[0], 1, true);
             }
             else
             {
                 // Do a full request of just one byte
-                data.bytes[0] = cmd;
-                tmc9660_readWriteSPI(icID, &data.bytes[0], 1, false);
+                data[0] = cmd;
+                tmc9660_readWriteSPI(icID, &data[0], 1, false);
             }
-        } while (data.bytes[0] == TMC9660_PARAMSPISTATUS_NOT_READY);
+
+            if (timeout_us && (tmc_getMicrosecondTimestamp() - timestamp) > timeout_us)
+            {
+                if (TMC_API_TMC9660_ENABLE_SPI_POLL_RESUMING)
+                {
+                    // Zero-sized request to de-assert chip select
+                    tmc9660_readWriteSPI(icID, &data[0], 0, false);
+                }
+
+                // Report timeout error
+                return false;
+            }
+        } while (data[0] == TMC9660_PARAMSPISTATUS_NOT_READY);
     }
+
+    // Construct the request datagram
+    // data[0] is managed separately for fast poll support
+    data[1] = type & 0xFF;
+    data[2] = (type >> 8) << 4 | (index & 0x0F);
+    data[3] = (writeValue >> 24) & 0xFF;
+    data[4] = (writeValue >> 16) & 0xFF;
+    data[5] = (writeValue >> 8)  & 0xFF;
+    data[6] = (writeValue)       & 0xFF;
+    // The checksum calculation must manually incorporate cmd
+    // because we're skipping data[0] here.
+    data[7] = calcParamChecksum(&data[1], 6) + cmd;
 
     // Complete the SPI transaction
     if (TMC_API_TMC9660_ENABLE_SPI_POLL_RESUMING && poll)
     {
         // The first byte is already transmitted, send the rest
-        tmc9660_readWriteSPI(icID, &data.bytes[1], sizeof(data) - 1, false);
+        tmc9660_readWriteSPI(icID, &data[1], 7, false);
     }
     else
     {
         // Send the full request
-        data.bytes[0] = cmd;
-        tmc9660_readWriteSPI(icID, &data.bytes[0], sizeof(data), false);
+        data[0] = cmd;
+        tmc9660_readWriteSPI(icID, &data[0], 8, false);
     }
 
-    if (data.bytes[0] == TMC9660_PARAMSPISTATUS_CHECKSUM_ERROR)
-        return -5;
+    return true;
+}
+
+static int32_t tmc9660_param_spiSingleRequest(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue, bool poll, uint32_t timeout_us)
+{
+    uint8_t data[8] = { 0 };
+
+    if (!sendRequestSPI(icID, cmd, type, index, writeValue, &data[0], poll, timeout_us))
+        return TMC9660_ERROR_TIMEOUT;
+
+    if (calcParamChecksum(&data[0], 7) != data[7])
+        return TMC9660_ERROR_INVALID_CHECKSUM;
 
     if (readValue)
     {
-        *readValue = ((uint32_t)data.bytes[3] << 24) | ((uint32_t)data.bytes[4] << 16) | (data.bytes[5] << 8) | data.bytes[6];
+        *readValue = ((uint32_t) data[3] << 24)
+                   | ((uint32_t) data[4] << 16)
+                   | ((uint32_t) data[5] << 8)
+                   | ((uint32_t) data[6]);
     }
 
-    return data.bytes[1];
+    return data[1];
 }
 
 static int32_t tmc9660_param_sendCommand_UART(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue)
@@ -487,29 +570,32 @@ static int32_t tmc9660_param_sendCommand_UART(uint16_t icID, uint8_t cmd, uint16
     TMC9660BusAddresses addresses = tmc9660_getBusAddresses(icID);
 
     if (!sendRequestUART(icID, cmd, type, index, writeValue, data, addresses, true))
-        return -2;
+        return TMC9660_ERROR_TIMEOUT;
 
     uint8_t syncByte = 0x01 | (addresses.device);
 
     // Unpack the reply
     if (data[0] != addresses.host)
-        return -3;
+        return TMC9660_ERROR_WRONG_ADDR;
     if (data[1] != syncByte)
-        return -4;
+        return TMC9660_ERROR_INVALID_REPLY;
     if (data[8] != calcParamChecksum(&data[0], 8))
-        return -5;
+        return TMC9660_ERROR_INVALID_CHECKSUM;
 
     if (readValue)
     {
-        *readValue = ((uint32_t)data[4] << 24) | ((uint32_t)data[5] << 16) | (data[6] << 8) | data[7];
+        *readValue = ((uint32_t) data[4] << 24)
+                   | ((uint32_t) data[5] << 16)
+                   | ((uint32_t) data[6] << 8)
+                   | ((uint32_t) data[7]);
     }
 
     return data[2];
 }
 
-int32_t tmc9660_param_sendPipelinedSPICommand(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t requestValue, uint32_t *replyValue, bool requireReply)
+int32_t tmc9660_param_sendPipelinedSPICommand(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t requestValue, uint32_t *replyValue, bool requireReply, uint32_t timeout_us)
 {
-    return tmc9660_param_spiSingleRequest(icID, cmd, type, index, requestValue, replyValue, requireReply);
+    return tmc9660_param_spiSingleRequest(icID, cmd, type, index, requestValue, replyValue, requireReply, timeout_us);
 }
 
 static int32_t tmc9660_param_getVersionASCII_UART(uint16_t icID, uint8_t *versionString)
@@ -518,7 +604,7 @@ static int32_t tmc9660_param_getVersionASCII_UART(uint16_t icID, uint8_t *versio
     TMC9660BusAddresses addresses = tmc9660_getBusAddresses(icID);
 
     if (!sendRequestUART(icID, TMC9660_CMD_GET_VERSION, 0, 0, 0, data, addresses, true))
-        return -2;
+        return TMC9660_ERROR_TIMEOUT;
 
     versionString[0] = data[1];
     versionString[1] = data[2];
@@ -532,15 +618,62 @@ static int32_t tmc9660_param_getVersionASCII_UART(uint16_t icID, uint8_t *versio
     return 0;
 }
 
+static int32_t tmc9660_param_readTMCLMemory_UART(uint16_t icID, uint32_t cmdIndex, uint8_t *command)
+{
+    uint8_t data[9] = { 0 };
+    TMC9660BusAddresses addresses = tmc9660_getBusAddresses(icID);
+
+    if (!sendRequestUART(icID, TMC9660_CMD_READ_MEM, 0, 0, cmdIndex, data, addresses, true))
+        return TMC9660_ERROR_TIMEOUT;
+
+    command[0] = data[1];
+    command[1] = data[2];
+    command[2] = data[3];
+    command[3] = data[4];
+    command[4] = data[5];
+    command[5] = data[6];
+    command[6] = data[7];
+
+    return 0;
+}
+
 static int32_t tmc9660_param_returnToBootloader_UART(uint16_t icID)
 {
     uint8_t data[9] = { 0 };
     TMC9660BusAddresses addresses = tmc9660_getBusAddresses(icID);
 
     if (!sendRequestUART(icID, TMC9660_CMD_BOOT, 0x981, 0x2, 0xA3B4C5D6, data, addresses, false))
-        return -2;
+        return TMC9660_ERROR_TIMEOUT;
 
     return 0;
+}
+
+static int32_t tmc9660_param_getVersionASCII_SPI(uint16_t icID, uint8_t *versionString)
+{
+    // Send the command request
+    tmc9660_param_spiSingleRequest(icID, TMC9660_CMD_GET_VERSION, 0, 0, 0, NULL, false, 0);
+
+    // Get the reply with a NOOP request
+    uint8_t data[8] = { 0 };
+    if (!sendRequestSPI(icID, 0xFF, 0, 0, 0, data, true, 1000))
+        return TMC9660_ERROR_TIMEOUT;
+
+    // Unpack the special data format
+    versionString[0] = data[0];
+    versionString[1] = data[1];
+    versionString[2] = data[2];
+    versionString[3] = data[3];
+    versionString[4] = data[4];
+    versionString[5] = data[5];
+    versionString[6] = data[6];
+    versionString[7] = data[7];
+
+    return 0;
+}
+
+static int32_t tmc9660_param_returnToBootloader_SPI(uint16_t icID)
+{
+    return tmc9660_param_spiSingleRequest(icID, TMC9660_CMD_BOOT, 0x981, 0x2, 0xA3B4C5D6, NULL, false, 0);
 }
 
 int32_t tmc9660_reg_sendCommand(uint16_t icID, uint8_t cmd, uint16_t registerOffset, uint8_t registerBlock, uint32_t writeValue, uint32_t *readValue)
@@ -556,7 +689,7 @@ int32_t tmc9660_reg_sendCommand(uint16_t icID, uint8_t cmd, uint16_t registerOff
         return tmc9660_reg_sendCommand_UART(icID, cmd, registerOffset, registerBlock, writeValue, readValue);
     }
 
-    return -1;
+    return TMC9660_ERROR_INVALID_BUS;
 }
 
 int32_t tmc9660_reg_getVersionASCII(uint16_t icID, uint8_t *versionString)
@@ -591,19 +724,22 @@ static int32_t tmc9660_reg_sendCommand_UART(uint16_t icID, uint8_t cmd, uint16_t
     data[8] = calcParamChecksum(&data[0], 8);
 
     if (!tmc9660_readWriteUART(icID, &data[0], 9, 9))
-        return -2;
+        return TMC9660_ERROR_TIMEOUT;
 
     // Unpack the reply
     if (data[0] != addresses.host)
-        return -3;
+        return TMC9660_ERROR_WRONG_ADDR;
     if (data[1] != syncByte)
-        return -4;
+        return TMC9660_ERROR_INVALID_REPLY;
     if (data[8] != calcParamChecksum(&data[0], 8))
-        return -5;
+        return TMC9660_ERROR_INVALID_CHECKSUM;
 
     if (readValue)
     {
-        *readValue = ((uint32_t)data[4] << 24) | ((uint32_t)data[5] << 16) | (data[6] << 8) | data[7];
+        *readValue = ((uint32_t) data[4] << 24)
+                   | ((uint32_t) data[5] << 16)
+                   | ((uint32_t) data[6] << 8)
+                   | ((uint32_t) data[7]);
     }
 
     return data[2];

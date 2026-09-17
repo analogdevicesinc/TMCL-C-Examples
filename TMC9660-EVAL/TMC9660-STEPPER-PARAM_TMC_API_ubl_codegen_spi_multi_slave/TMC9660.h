@@ -1,6 +1,5 @@
 /*******************************************************************************
-* Copyright © 2025 Analog Devices Inc. All Rights Reserved.
-* This software is proprietary to Analog Devices, Inc. and its licensors.
+* Copyright © 2025 Analog Devices, Inc.
 *******************************************************************************/
 
 
@@ -17,13 +16,26 @@
 * These can be commented in/out here or defined from the build system.
 *******************************************************************************/
 
-// Uncomment if you want to save space.....
-// and put the table into your own .c file
+// Set this if your application uses multiple Trinamic ICs with the same
+// CRC polynomials and you want to save data size.
+// When set, the TMC-API expects the required CRC tables to defined in your
+// application. The tables needed by this IC are tmcCRCTable_Poly7Reflected
+// and tmcCRCTable_Poly104C11DB7Reflected. See TMC9660.c for their full definition.
+#ifndef TMC_API_EXTERNAL_CRC_TABLE
 //#define TMC_API_EXTERNAL_CRC_TABLE 1
+#define TMC_API_EXTERNAL_CRC_TABLE 0
+#endif
 
-// Uncomment if you want to use fault pin related features
-// If enabled, this requires an additional wrapper function
+// If your application includes a monitoring connection of the FAULTN pin
+// of the TMC9660 and you want to use functions related to it in the TMC-API.
+// When enabled, this allows for faster runtime bootstrapping by having the
+// TMC9660 signal completion of bootstrap steps via the FAULTN pin.
+// If you set this define, you must supply the tmc9660_isFaultPinAsserted
+// wrapper function.
+#ifndef TMC_API_TMC9660_FAULT_PIN_SUPPORTED
 #define TMC_API_TMC9660_FAULT_PIN_SUPPORTED 1
+// #define TMC_API_TMC9660_FAULT_PIN_SUPPORTED 0
+#endif
 
 // Set this if you want to have SPI polling continue the polling
 // transaction after receiving a non-BUSY reply. This requires your
@@ -38,6 +50,24 @@
 
 
 /*** TMC9660 constants ********************************************************/
+typedef enum TMC9660APIError_ {
+    // General API errors
+    TMC9660_ERROR_INVALID_BUS           = -1,
+    TMC9660_ERROR_TIMEOUT               = -2,
+    TMC9660_ERROR_WRONG_ADDR            = -3,
+    TMC9660_ERROR_INVALID_REPLY         = -4,
+    // Note: This reports invalid reply checksums.
+    // Invalid request checksums get reported in the reply's status,
+    // not the TMC-API access function error code.
+    TMC9660_ERROR_INVALID_CHECKSUM      = -5,
+
+    // Chip-specific API errors
+    TMC9660_ERROR_FAULTN_TIMEOUT        = -16, // Note: Used in UblTools code generation
+    TMC9660_ERROR_INVALID_ADDON         = -17,
+    TMC9660_ERROR_NO_ADDON_SPACE        = -18,
+    TMC9660_ERROR_INVALID_ADDON_INSTALL = -19, // Note: Used in UblTools code generation
+} TMC9660APIError;
+
 typedef enum TMC9660BusType_ {
     TMC9660_BUS_SPI,
     TMC9660_BUS_UART,
@@ -159,13 +189,11 @@ typedef enum TMC9660ParamStatus_ {
 } TMC9660ParamStatus;
 
 typedef enum TMC9660ParamSPIStatus_ {
-    TMC9660_PARAMSPISTATUS_OK             = 0xFF,
-    TMC9660_PARAMSPISTATUS_CHECKSUM_ERROR = 0xAA,
+    TMC9660_PARAMSPISTATUS_OK             = 0xAD,
     TMC9660_PARAMSPISTATUS_FIRST_CMD      = 0x0C,
     TMC9660_PARAMSPISTATUS_NOT_READY      = 0x00,
 } TMC9660ParamSPIStatus;
 
-/******************************************************************************/
 
 /*** TMC-API wrapper functions ************************************************/
 // These function must be implemented in your application
@@ -221,7 +249,7 @@ extern void tmc9660_readWriteSPI(uint16_t icID, uint8_t *data, size_t dataLength
  */
 extern bool tmc9660_readWriteUART(uint16_t icID, uint8_t *data, size_t writeLength, size_t readLength);
 
-#if TMC_API_TMC9660_FAULT_PIN_SUPPORTED == 1
+#if TMC_API_TMC9660_FAULT_PIN_SUPPORTED != 0
 extern bool tmc9660_isFaultPinAsserted(uint16_t icID);
 #endif
 
@@ -237,26 +265,68 @@ extern uint32_t tmc_getMicrosecondTimestamp();
 void tmc_delayMicroseconds(uint32_t microseconds);
 
 /*** TMC9660 general functions ************************************************/
-#if TMC_API_TMC9660_FAULT_PIN_SUPPORTED == 1
-void tmc9660_waitForFaultDeassertion(uint16_t icID);
+#if TMC_API_TMC9660_FAULT_PIN_SUPPORTED != 0
+bool tmc9660_waitForFaultDeassertion(uint16_t icID, uint32_t timeout_us);
 #endif
 
 /*** TMC9660 Bootloader Mode functions ****************************************/
 int32_t tmc9660_bl_sendCommand(uint16_t icID, uint8_t cmd, uint32_t writeValue, uint32_t *readValue);
 
 // Addon upload
-int32_t tmc9660_bl_installAddon(uint16_t icID, uint8_t *addon, uint32_t addonSize);
+int32_t tmc9660_bl_installAddon(uint16_t icID, const uint8_t *addon, uint32_t addonSize);
+
+// Addon verification
+// Returns a negative value on error, 0 if no addon is installed, 1 if an addon is installed.
+// The id and version are only written if an addon is installed (return value 1).
 int32_t tmc9660_bl_getAddonInfo(uint16_t icID, uint32_t *id, uint32_t *version);
 
 /*** TMC9660 Parameter Mode functions *****************************************/
 int32_t tmc9660_param_sendCommand(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t writeValue, uint32_t *readValue);
 
-// Special case commands: These two functions run commands that are edge cases of the underlying protocol
+// Special case commands: These functions run commands that are edge cases of the underlying protocol
+// Note: readTMCLMemory is only available when communicating via UART.
 int32_t tmc9660_param_getVersionASCII(uint16_t icID, uint8_t *versionString);
+int32_t tmc9660_param_readTMCLMemory(uint16_t icID, uint32_t cmdIndex, uint8_t *command);
 int32_t tmc9660_param_returnToBootloader(uint16_t icID);
 
-// Special case function: This function can be used to perform pipelined SPI accesses
-int32_t tmc9660_param_sendPipelinedSPICommand(uint16_t icID, uint8_t cmd, uint16_t type, uint8_t index, uint32_t requestValue, uint32_t *replyValue, bool requireReply);
+/**
+ * @brief SPI pipeline access function
+ *
+ * This function serves as a low level access function to implement fast, pipelined
+ * SPI communication. Each call corresponds to one SPI request to the TMC9660.
+ *
+ * @param icID
+ *        The IC to communicate with. This gets forwarded to callback functions.
+ * @param cmd
+ *        The parameter mode command to send.
+ * @param type
+ *        The parameter mode type to send.
+ * @param index
+ *        The parameter mode index to send.
+ * @param requestValue
+ *        The parameter mode value to send.
+ * @param replyValue
+ *        The reply value to receive. This function will write the received reply word
+ *        into this pointer. If the pointer is NULL, this will be skipped.
+ *        Note that when requireReply is false, no reply is guaranteed to actually arrive.
+ * @param requireReply
+ *        Whether to poll the TMC9660 to receive a reply. Only set this if a prior request
+ *        was sent that did not yet get a reply.
+ * @param timeout_us
+ *        The timeout for the polling done when requireReply is set.
+ *
+ * @return Returns a negative error status code, or the positive TMCL reply status byte.
+ */
+int32_t tmc9660_param_sendPipelinedSPICommand(
+        uint16_t icID,
+        uint8_t cmd,
+        uint16_t type,
+        uint8_t index,
+        uint32_t requestValue,
+        uint32_t *replyValue,
+        bool requireReply,
+        uint32_t timeout_us
+        );
 
 uint32_t tmc9660_param_getParameter(uint16_t icID, uint16_t type);
 bool tmc9660_param_setParameter(uint16_t icID, uint16_t type, uint32_t value);
@@ -270,5 +340,7 @@ int32_t tmc9660_reg_sendCommand(uint16_t icID, uint8_t cmd, uint16_t registerOff
 // Special case commands: These two functions run commands that are edge cases of the underlying protocol
 int32_t tmc9660_reg_getVersionASCII(uint16_t icID, uint8_t *versionString);
 int32_t tmc9660_reg_returnToBootloader(uint16_t icID);
+
+/******************************************************************************/
 
 #endif /* TMC_IC_TMC9660_H_ */
