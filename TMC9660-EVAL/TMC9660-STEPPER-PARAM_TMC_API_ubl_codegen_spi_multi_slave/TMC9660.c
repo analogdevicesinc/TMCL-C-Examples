@@ -2,7 +2,6 @@
 * Copyright © 2025 Analog Devices, Inc.
 *******************************************************************************/
 
-
 #include "TMC9660.h"
 
 #define SPI_DEFAULT_DELAY 100 // [us]

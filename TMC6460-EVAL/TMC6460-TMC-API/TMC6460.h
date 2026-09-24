@@ -1,7 +1,6 @@
-/*******************************************************************c:\Users\DHussain\Documents\Arduino\libraries\TMC6460-TMC-API\TMC6460.c c:\Users\DHussain\Documents\Arduino\libraries\TMC6460-TMC-API\TMC6460.h c:\Users\DHussain\Documents\Arduino\libraries\TMC6460-TMC-API\TMC6460_HW_Abstraction.h************
+/*******************************************************************************
 * Copyright © 2026 Analog Devices, Inc.
 *******************************************************************************/
-
 
 #ifndef TMC_IC_TMC6460_H_
 #define TMC_IC_TMC6460_H_

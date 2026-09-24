@@ -1,8 +1,6 @@
 /*******************************************************************************
-* Copyright © 2025 Analog Devices Inc. All Rights Reserved.
-* This software is proprietary to Analog Devices, Inc. and its licensors.
+* Copyright © 2026 Analog Devices, Inc.
 *******************************************************************************/
-
 
 #ifndef TMC_IC_TMC5222_H_
 #define TMC_IC_TMC5222_H_

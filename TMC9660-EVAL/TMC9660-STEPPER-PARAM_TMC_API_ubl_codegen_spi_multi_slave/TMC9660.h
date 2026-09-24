@@ -2,7 +2,6 @@
 * Copyright © 2025 Analog Devices, Inc.
 *******************************************************************************/
 
-
 #ifndef TMC_IC_TMC9660_H_
 #define TMC_IC_TMC9660_H_
 
